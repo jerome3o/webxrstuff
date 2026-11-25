@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Collider } from './physics.js';
 import { audio } from './audio.js';
 import { CFG } from './config.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeCanvas, canvasTexture, rand, pick, FONT_BRUSH, FONT_SERIF } from './util.js';
 
 // Every target answers hits with { response, points, label, sub, coins, color }.
@@ -10,7 +11,7 @@ import { makeCanvas, canvasTexture, rand, pick, FONT_BRUSH, FONT_SERIF } from '.
 const _v = new THREE.Vector3();
 const fontRedraws = [];
 export function redrawTargetTextures() { for (const f of fontRedraws) f(); }
-export function resetTargetTextures() { fontRedraws.length = 0; }
+export function resetTargetTextures() { fontRedraws.length = 0; _lanternCache = null; }
 
 function charTexture(draw, w = 256, h = 256) {
   const c = makeCanvas(w, h);
@@ -79,14 +80,19 @@ export class RingTarget extends Target {
     const rope = new THREE.Mesh(new THREE.TorusGeometry(radius * 1.05, 0.02, 5, 32), new THREE.MeshLambertMaterial({ color: 0x8a6a3a }));
     rope.position.z = 0.1; face.add(rope);
     // A-frame stand
-    const wood = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    // A-frame stand merged into one mesh
     const legH = pos.y + radius * 0.6;
+    const parts = [];
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     for (const s of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, legH + 0.3, 0.08), wood);
-      leg.position.set(s * radius * 0.7, -pos.y + legH / 2 - 0.1, -0.25); leg.rotation.z = s * 0.12; leg.rotation.x = -0.12; this.group.add(leg);
+      e.set(-0.12, 0, s * 0.12); q.setFromEuler(e);
+      m4.compose(new THREE.Vector3(s * radius * 0.7, -pos.y + legH / 2 - 0.1, -0.25), q, new THREE.Vector3(1, 1, 1));
+      parts.push(new THREE.BoxGeometry(0.08, legH + 0.3, 0.08).applyMatrix4(m4));
     }
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, legH, 0.08), wood);
-    back.position.set(0, -pos.y + legH / 2, -0.6); back.rotation.x = 0.35; this.group.add(back);
+    e.set(0.35, 0, 0); q.setFromEuler(e);
+    m4.compose(new THREE.Vector3(0, -pos.y + legH / 2, -0.6), q, new THREE.Vector3(1, 1, 1));
+    parts.push(new THREE.BoxGeometry(0.08, legH, 0.08).applyMatrix4(m4));
+    this.group.add(new THREE.Mesh(mergeGeometries(parts), new THREE.MeshLambertMaterial({ color: 0x5a3a20 })));
     this.addCollider(face, 'disk', { r: radius * 1.05, h: 0.16 }, 'straw');
   }
   update(dt, t) {
@@ -110,21 +116,35 @@ export class RingTarget extends Target {
 }
 
 // ── 灯笼: hanging red lantern on a rope ────────────────────────
-function lanternMesh(scale = 1, color = 0xc81e1e) {
-  const g = new THREE.Group();
+// One merged, vertex-coloured mesh for body + caps + tassel, plus one glyph plane:
+// 2 draw calls per lantern instead of 7. Geometry, material and glyphs are shared.
+let _lanternCache = null;
+function lanternParts() {
+  if (_lanternCache) return _lanternCache;
+  const paint = (geo, hex) => {
+    geo = geo.index ? geo : geo;
+    const c = new THREE.Color(hex), n = geo.attributes.position.count, arr = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    return geo;
+  };
   const pts = [];
   for (let i = 0; i <= 12; i++) { const a = -Math.PI / 2 + i / 12 * Math.PI; pts.push(new THREE.Vector2(Math.cos(a) * 0.3 + 0.02, Math.sin(a) * 0.34)); }
-  const body = new THREE.Mesh(new THREE.LatheGeometry(pts, 14), new THREE.MeshStandardMaterial({ color, emissive: 0xff3a10, emissiveIntensity: 0.65, roughness: 0.8 }));
-  g.add(body);
-  const gold = new THREE.MeshStandardMaterial({ color: 0xd9a63a, metalness: 0.7, roughness: 0.35 });
-  for (const y of [0.34, -0.34]) { const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.06, 12), gold); cap.position.y = y; g.add(cap); }
-  const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.3, 8), new THREE.MeshLambertMaterial({ color: 0xe0b040 }));
-  tassel.position.y = -0.52; tassel.rotation.x = Math.PI; g.add(tassel);
-  const glyph = charTexture((x, w) => { x.fillStyle = '#ffd36a'; x.font = `${w * 0.6}px ${FONT_BRUSH}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(pick(['福', '喜', '春', '吉', '寿']), w / 2, w / 2 + 6); }, 128, 128);
-  for (const s of [1, -1]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), new THREE.MeshBasicMaterial({ map: glyph, transparent: true, depthWrite: false }));
-    p.position.z = s * 0.325; if (s < 0) p.rotation.y = Math.PI; g.add(p);
-  }
+  const parts = [paint(new THREE.LatheGeometry(pts, 14), 0xe0301c)];
+  for (const y of [0.34, -0.34]) parts.push(paint(new THREE.CylinderGeometry(0.13, 0.13, 0.06, 12).translate(0, y, 0), 0xf0c050));
+  parts.push(paint(new THREE.ConeGeometry(0.06, 0.3, 8).rotateX(Math.PI).translate(0, -0.52, 0), 0xf0c040));
+  const geo = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g));
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0xff3a10, emissiveIntensity: 0.55 });
+  const glyphs = ['福', '喜', '春', '吉', '寿'].map(ch => charTexture((x, w) => { x.fillStyle = '#ffd36a'; x.font = `${w * 0.6}px ${FONT_BRUSH}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, w / 2, w / 2 + 6); }, 128, 128));
+  const glyphMats = glyphs.map(t => new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }));
+  const glyphGeo = new THREE.PlaneGeometry(0.28, 0.28);
+  return (_lanternCache = { geo, mat, glyphMats, glyphGeo });
+}
+function lanternMesh(scale = 1) {
+  const P = lanternParts();
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(P.geo, P.mat));
+  const p = new THREE.Mesh(P.glyphGeo, pick(P.glyphMats)); p.position.z = 0.325; g.add(p);
   g.scale.setScalar(scale);
   return g;
 }

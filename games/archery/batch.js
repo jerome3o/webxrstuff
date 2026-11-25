@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // Merge static meshes that share an equivalent material into one mesh per material.
 // Standalone headsets are draw-call bound, and the environment is hundreds of small pieces.
-// Skips: physics meshes (raycast targets), multi-material meshes, shader materials,
+// Physics meshes (raycast targets) are merged visually but kept as hidden proxies. Skips: multi-material meshes, shader materials,
 // instanced meshes, and anything flagged `userData.dynamic` (or under such a parent).
 
 function matKey(m) {
@@ -15,7 +15,7 @@ export function bakeStatic(root, exclude = new Set()) {
   const rootInv = root.matrixWorld.clone().invert();
   const groups = new Map();
   root.traverse((o) => {
-    if (!o.isMesh || o.isInstancedMesh || exclude.has(o)) return;
+    if (!o.isMesh || o.isInstancedMesh) return;
     if (Array.isArray(o.material) || o.material.isShaderMaterial) return;
     for (let p = o; p; p = p.parent) if (p.userData.dynamic) return;
     const k = matKey(o.material);
@@ -41,7 +41,8 @@ export function bakeStatic(root, exclude = new Set()) {
     mesh.name = 'baked';
     mesh.matrixAutoUpdate = false;
     root.add(mesh);
-    for (const o of items) o.removeFromParent();
+    // Physics meshes stay in the scene as invisible raycast proxies (Raycaster ignores visibility).
+    for (const o of items) { if (exclude.has(o)) o.visible = false; else o.removeFromParent(); }
     after++;
   }
   return { before, after };
