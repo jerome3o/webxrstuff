@@ -60,7 +60,7 @@ export async function createHub(ctx, games, launch) {
     draw: (c, W, H) => {
       roundRect(c, 0, 0, W, H, 30); c.fillStyle = 'rgba(20,20,36,0.85)'; c.fill();
       c.fillStyle = '#f1e6cf'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      fitText(c, 'In any game: hold Y on the left controller to come back here', W / 2, H * 0.36, W - 60, 40, FONTS.sans);
+      fitText(c, 'In any game: hold X/Y (left) or B (right) for 1 s to come back here', W / 2, H * 0.36, W - 60, 40, FONTS.sans);
       c.fillStyle = '#a8a0c0';
       fitText(c, 'Desktop: Tab returns here · click to look around', W / 2, H * 0.72, W - 60, 34, FONTS.sans);
     },

@@ -54,7 +54,7 @@ keep game state inside `create`.
 `input.head` = `{ pos, quat, fwd, up }` world space. `input.desktop` / `input.xr` booleans.
 `input.trackedHand('left'|'right')` returns `{ joints }` (XRHand joint Object3Ds keyed by WebXR joint name, e.g. `'index-finger-tip'`) when hand tracking is active, else null. With hand tracking and no controller, `trigger` = pinch.
 
-Reserved: **holding left Y (left `b`) for 0.8 s returns to the hub**, and Tab on desktop. Short presses of left Y still reach the game.
+Reserved: **holding X or Y on the left controller, or B on the right, for 1 s returns to the hub** (Tab on desktop). Short presses still reach the game, so avoid long-hold actions on those buttons.
 
 ### Desktop emulation
 Pointer-locked mouse look. Main hand ray = crosshair (camera ray); main grip sits lower right of view, off grip lower left.

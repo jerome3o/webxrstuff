@@ -73,7 +73,9 @@ export class Interaction {
       _p.copy(h.rayDir()).multiplyScalar(0.07 * g.player.scale).add(h.gripPos);
       const id = world.getBlock(Math.floor(_p.x), Math.floor(_p.y), Math.floor(_p.z));
       const d = BLOCKS[id];
-      if (id > 0 && d && d.render !== 'liquid' && d.render !== 'cross') {
+      // Ignore the ground you're standing on: only blocks at or above foot level count as "touched".
+      const aboveFeet = Math.floor(_p.y) >= Math.floor(g.player.feetY + 0.05);
+      if (aboveFeet && id > 0 && d && d.render !== 'liquid' && d.render !== 'cross') {
         physical = true;
         this.target = this._setT(Math.floor(_p.x), Math.floor(_p.y), Math.floor(_p.z), 0, 1, 0, id, true);
       }

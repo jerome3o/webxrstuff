@@ -330,14 +330,12 @@ export class Vitals {
       hb.position.copy(cam.position); hb.quaternion.copy(cam.quaternion);
       hb.translateY(-0.142); hb.translateZ(-0.5); hb.scale.setScalar(0.92);
     } else {
-      const o = input.off;
-      hb.visible = show && o.present;
+      // floats just above the hotbar, in front of you (see GameUI._updateHudAnchor)
+      const a = g.ui.hudAnchor;
+      hb.visible = show && (input.main.present || input.off.present);
       if (hb.visible) {
-        hb.position.copy(o.gripPos).applyMatrix4(g.rigInv);
-        _q.setFromRotationMatrix(_m.extractRotation(g.rigInv)).multiply(o.gripQuat);
-        _v.set(0, 0.118, 0.05).applyQuaternion(_q); hb.position.add(_v);
-        hb.scale.setScalar(0.85);
-        cam.getWorldPosition(_w); hb.lookAt(_w);
+        hb.position.copy(a.position); hb.quaternion.copy(a.quaternion);
+        hb.translateY(0.065); hb.scale.setScalar(1);
       }
     }
     if (!hb.visible) return;

@@ -17,6 +17,7 @@ const COL = {
 };
 const BTN = { bg: COL.btn, hoverBg: COL.btnHover, border: '#a99cc8', fg: COL.paper, activeBg: '#5f8f6a', font: FONTS.sans };
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+const _e = new THREE.Euler(), _up = new THREE.Vector3(0, 1, 0);
 
 export class GameUI {
   constructor(game) {
@@ -35,6 +36,9 @@ export class GameUI {
     // hotbar
     this.hotbar = new Panel({ width: 0.36, height: 0.075, px: 1024, draw: (c, W, H, p) => this._drawHotbar(c, W, H, p) });
     this.hotbar.mesh.renderOrder = 1500;
+    // VR HUD anchor (rig-local): sits below eye level in front and turns with you lazily.
+    this.hudAnchor = new THREE.Object3D(); game.ctx.rig.add(this.hudAnchor);
+    this._hudYaw = null;
     this.hotbar.mesh.material.depthTest = false;
     game.ctx.rig.add(this.hotbar.mesh);
     this.pointer.panels.push(this.hotbar);
@@ -86,6 +90,23 @@ export class GameUI {
     this.modalOpen = false; this.modal.mesh.visible = false; this.confirmNew = 0;
     this.game.audio.click();
   }
+  // Lazy-follow: the HUD stays put until you turn your head ~35° away, then glides back in front.
+  _updateHudAnchor(dt) {
+    const cam = this.game.ctx.camera, a = this.hudAnchor;
+    _e.setFromQuaternion(cam.quaternion, 'YXZ');
+    const yaw = _e.y;
+    if (this._hudYaw === null) { this._hudYaw = yaw; this._hudTarget = yaw; }
+    const diff = Math.atan2(Math.sin(yaw - this._hudTarget), Math.cos(yaw - this._hudTarget));
+    if (Math.abs(diff) > 0.6) this._hudTarget = yaw;
+    const d2 = Math.atan2(Math.sin(this._hudTarget - this._hudYaw), Math.cos(this._hudTarget - this._hudYaw));
+    this._hudYaw += d2 * (1 - Math.exp(-5 * dt));
+    a.position.set(cam.position.x - Math.sin(this._hudYaw) * 0.6, cam.position.y - 0.38, cam.position.z - Math.cos(this._hudYaw) * 0.6);
+    // face the eye
+    _w.set(cam.position.x, cam.position.y, cam.position.z);
+    _m.lookAt(_w, a.position, _up);
+    a.quaternion.setFromRotationMatrix(_m);
+  }
+
   toast(text, secs = 1.6) { this.toastText = text; this.toastT = secs; this.toastPanel.markDirty(); }
 
   update(dt) {
@@ -98,16 +119,10 @@ export class GameUI {
       hb.scale.setScalar(0.92);
       hb.visible = true;
     } else {
-      const o = input.off;
-      hb.visible = o.present;
-      if (o.present) {
-        hb.position.copy(o.gripPos).applyMatrix4(g.rigInv);
-        _q.setFromRotationMatrix(_m.extractRotation(g.rigInv)).multiply(o.gripQuat);
-        _v.set(0, 0.07, 0.05).applyQuaternion(_q); hb.position.add(_v);
-        hb.scale.setScalar(0.85);
-        cam.getWorldPosition(_w);
-        hb.lookAt(_w);
-      }
+      this._updateHudAnchor(dt);
+      hb.visible = input.main.present || input.off.present;
+      hb.position.copy(this.hudAnchor.position); hb.quaternion.copy(this.hudAnchor.quaternion);
+      hb.scale.setScalar(1);
     }
     // keep the modal near the player (e.g. while falling or after a teleport)
     if (this.modalOpen && this.modal.mesh.position.distanceTo(input.head.pos) > 2.2 * s) this._placeModal();
@@ -118,7 +133,7 @@ export class GameUI {
       tp.visible = true;
       tp.position.copy(cam.position); tp.quaternion.copy(cam.quaternion);
       if (input.desktop) { tp.translateY(0.12); tp.translateZ(-0.6); tp.scale.setScalar(0.7); }
-      else { tp.translateY(-0.22); tp.translateZ(-0.9); tp.scale.setScalar(1); }
+      else { tp.position.copy(this.hudAnchor.position); tp.quaternion.copy(this.hudAnchor.quaternion); tp.translateY(0.16); tp.scale.setScalar(1); }
       this.toastPanel.redraw();
     } else tp.visible = false;
     // pointer: always active on the modal, and on the wrist hotbar in VR
@@ -270,7 +285,7 @@ export class GameUI {
     if (g.mode === 'creative') row('Creative', [['Fly', g.player.flying, () => { g.player.flying = !g.player.flying; }], ['Day', false, () => g.sky.setTime(0.3)], ['Dusk', false, () => g.sky.setTime(0.73)], ['Night', false, () => g.sky.setTime(0.0)]]);
     row('World', [[this.confirmNew > 0 ? 'Tap again: new world' : 'New world', this.confirmNew > 0, () => {
       if (this.confirmNew > 0) { this.confirmNew = 0; g.newWorld(); } else { this.confirmNew = 3; }
-    }], [`Seed ${g.seed}`, false, null]]);
+    }], [`Seed ${g.seed}`, false, null], ['Back to hub', false, () => g.ctx.exit()]]);
     let y = 112;
     for (const r of rows) {
       c.fillStyle = COL.cream; c.font = `600 30px ${FONTS.sans}`; c.textAlign = 'left'; c.textBaseline = 'middle';

@@ -1,8 +1,8 @@
 # 游乐场 · VR Playground
 
 A WebXR hub of twelve games for the Steam Frame (and any WebXR headset), with a desktop mode for testing.
-Open the page, press **Enter VR**, point at a game card and pull the trigger. In any game, **hold Y on the left
-controller** (desktop: Tab) to come back to the hub.
+Open the page, press **Enter VR**, point at a game card and pull the trigger. In any game, **hold X or Y on the left controller, or B on the right, for one second
+** (desktop: Tab) to come back to the hub.
 
 | | Game | Folder | Shows off |
 |---|---|---|---|

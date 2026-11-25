@@ -105,6 +105,7 @@ async function launch(id) {
     }
     currentId = id;
     lbl.removeFromParent();
+    if (id !== 'hub') showExitHint();
     if (renderer.xr.isPresenting) ctx.recenter(current?.spawn?.x ?? 0, current?.spawn?.z ?? 0, current?.spawn?.yaw ?? 0);
   } catch (e) {
     console.error(`Failed to load game "${id}"`, e);
@@ -115,7 +116,7 @@ async function launch(id) {
   loading = false;
 }
 
-// ── Return-to-hub gesture: hold left Y for 0.8 s (desktop: Tab) ─
+// ── Return-to-hub gesture: hold X or Y on the left controller, or B on the right, for 1 s (desktop: Tab) ─
 const holdBar = new THREE.Group();
 {
   const bg = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.018), new THREE.MeshBasicMaterial({ color: 0x222233, depthTest: false, transparent: true }));
@@ -126,17 +127,36 @@ const holdBar = new THREE.Group();
   const lbl = kit.makeLabel('Hold to return to hub', { size: 0.022, color: '#ffffff' }); lbl.position.y = 0.025; lbl.material.depthTest = false; lbl.renderOrder = 999; holdBar.add(lbl);
 }
 let holdTime = 0;
+// A short reminder, floating in view for a few seconds after a game starts (VR only).
+let hintSprite = null, hintTimer = 0;
+function showExitHint() {
+  hintSprite?.removeFromParent();
+  hintSprite = kit.makeLabel('Hold X/Y (left) or B (right) for 1 s to return to the hub', { size: 0.035, color: '#ffe7a0', bg: 'rgba(10,12,24,0.75)' });
+  hintSprite.material.depthTest = false; hintSprite.renderOrder = 999;
+  hintSprite.position.set(0, -0.18, -0.7);
+  camera.add(hintSprite);
+  hintTimer = 5;
+}
+function updateExitHint(dt) {
+  if (!hintSprite) return;
+  hintSprite.visible = renderer.xr.isPresenting;
+  if ((hintTimer -= dt) <= 0) { hintSprite.removeFromParent(); hintSprite.material.map?.dispose(); hintSprite.material.dispose(); hintSprite = null; }
+}
 function updateExitGesture(dt) {
   if (currentId === 'hub' || loading) { holdTime = 0; holdBar.removeFromParent(); return; }
   if (input.desktop && input.keyDown('Tab')) { launch('hub'); return; }
-  const L = input.left;
-  if (L.present && L.bHeld && !input.desktop) {
+  const L = input.left, R = input.right;
+  const holding = !input.desktop && ((L.present && (L.bHeld || L.aHeld)) || (R.present && R.bHeld));
+  if (holding) {
     holdTime += dt;
-    if (!holdBar.parent) scene.add(holdBar);
-    holdBar.position.copy(L.gripPos).add(new THREE.Vector3(0, 0.12, 0));
-    holdBar.lookAt(input.head.pos);
-    holdBar.userData.fg.scale.x = Math.min(1, holdTime / 0.8);
-    if (holdTime >= 0.8) { holdTime = 0; holdBar.removeFromParent(); launch('hub'); }
+    if (holdTime > 0.25) {
+      // show the progress bar in front of the eyes so it's visible whatever the hands are doing
+      if (!holdBar.parent) scene.add(holdBar);
+      holdBar.position.copy(input.head.pos).addScaledVector(input.head.fwd, 0.6).addScaledVector(input.head.up, -0.12);
+      holdBar.lookAt(input.head.pos);
+      holdBar.userData.fg.scale.x = Math.min(1, (holdTime - 0.25) / 0.75);
+    }
+    if (holdTime >= 1.0) { holdTime = 0; holdBar.removeFromParent(); launch('hub'); }
   } else { holdTime = 0; holdBar.removeFromParent(); }
 }
 
@@ -200,6 +220,7 @@ renderer.setAnimationLoop(() => {
   if (pendingRecenter > 0 && --pendingRecenter === 0) ctx.recenter(current?.spawn?.x ?? 0, current?.spawn?.z ?? 0, current?.spawn?.yaw ?? 0);
   if (!input.desktop && !renderer.xr.isPresenting) camera.rotation.set(-0.05, Math.sin(elapsed * 0.1) * 0.3, 0, 'YXZ');
   updateExitGesture(dt);
+  updateExitHint(dt);
   if (current && !loading) {
     try { current.update(dt, elapsed); }
     catch (e) {

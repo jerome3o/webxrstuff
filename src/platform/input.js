@@ -34,6 +34,14 @@ function makeHand(handedness) {
   };
 }
 
+function frameHasGrip(renderer, src) {
+  if (!src.gripSpace) return false;
+  try {
+    const frame = renderer.xr.getFrame?.(), ref = renderer.xr.getReferenceSpace?.();
+    return frame && ref ? !!frame.getPose(src.gripSpace, ref) : true;
+  } catch { return true; }
+}
+
 export class Input {
   constructor(renderer, rig, camera, dom) {
     this.renderer = renderer; this.rig = rig; this.camera = camera; this.dom = dom;
@@ -173,8 +181,12 @@ export class Input {
         continue;
       }
       if (!gp) { out.present = false; continue; }
-      c.grip.getWorldPosition(out.gripPos); c.grip.getWorldQuaternion(out.gripQuat);
       c.ray.getWorldPosition(out.rayPos); c.ray.getWorldQuaternion(out.rayQuat);
+      // Some runtimes don't report a grip space; three then leaves the grip at the rig origin
+      // (the player's feet). Fall back to the pointing-ray pose so held objects stay in the hand.
+      out.hasGrip = !!(frameHasGrip(this.renderer, src) && c.grip.visible);
+      if (out.hasGrip) { c.grip.getWorldPosition(out.gripPos); c.grip.getWorldQuaternion(out.gripQuat); }
+      else { out.gripPos.copy(out.rayPos); out.gripQuat.copy(out.rayQuat); }
       const val = (i) => gp.buttons[i] ? (gp.buttons[i].value ?? (gp.buttons[i].pressed ? 1 : 0)) : 0;
       const pressed = (i) => !!gp.buttons[i]?.pressed;
       this._setAnalog(out, val(0), val(1));
