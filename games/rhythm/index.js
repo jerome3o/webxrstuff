@@ -81,11 +81,12 @@ export async function create(ctx) {
   const glows = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), MAX_NOTES);
   const bombs = new THREE.InstancedMesh(makeBombGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }), 16);
   const latticeTex = makeLatticeTexture();
-  const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ map: latticeTex, color: 0xff6040, transparent: true, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }), MAX_WALLS);
+  const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ map: latticeTex, color: 0xe05a3a, transparent: true, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }), MAX_WALLS);
   for (const m of [bodies, arrows, dots, glows, bombs, walls]) { m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); }
   bodies.setColorAt(0, COLORS[0]); glows.setColorAt(0, COLORS[0]);
   arrows.renderOrder = dots.renderOrder = 2; glows.renderOrder = 1;
   scene.add(glows, bodies, arrows, dots, bombs, walls);
+  const noteMeshes = [bodies, arrows, dots, glows, bombs];
 
   const halfMat = new THREE.MeshBasicMaterial({ map: paper, vertexColors: true, side: THREE.DoubleSide, toneMapped: false });
   const halves = new Halves(scene, makeHalfGeometry(), halfMat, 64);
@@ -138,10 +139,10 @@ export async function create(ctx) {
   let song = null, hard = ctx.load('rhythm:hard', false), offsetMs = ctx.load('rhythm:offset', 0);
   let songPos = -10, audioWait = 0, clockInit = false, useAudio = false, t0 = 0, fallbackPos = 0, lastPerf = 0;
   let nextNote = 0, nextWall = 0, kickIdx = 0, lastKick = -10, pulse = 0;
-  let score = 0, combo = 0, maxCombo = 0, mult = 1, energy = 0.5, hits = 0, misses = 0, badCuts = 0, bombsHit = 0, maxScore = 1, multProgress = 0;
+  let rawPts = 0, score = 0, combo = 0, maxCombo = 0, mult = 1, energy = 0.5, hits = 0, misses = 0, badCuts = 0, bombsHit = 0, multProgress = 0;
   let inWall = false, wallFlash = 0, failTimer = 0, hudDirty = true, hudTimer = 0, resumeTimer = 0, lastProgressDraw = -1;
   let rowY = [0.85, 1.25, 1.65], headY = 1.6;
-  let deskActive = 1, results = null, lastBad = null, resumeAt = 0;
+  let wallHits = 0, deskActive = 1, results = null, lastBad = null, resumeAt = 0;
   const cursor = { x: 0.3, y: -0.1 };
   const timers = [];
 
@@ -153,7 +154,6 @@ export async function create(ctx) {
   const pending = []; // follow-through scoring
   for (let i = 0; i < 16; i++) pending.push({ on: false, blade: null, t: 0, dir: new THREE.Vector3(), base: 0, pos: new THREE.Vector3(), mult: 1, side: 0 });
 
-  const multFor = (c) => c < 2 ? 1 : c < 6 ? 2 : c < 14 ? 4 : 8;
 
   // ── clock ──
   function heardTime() {
@@ -199,8 +199,6 @@ export async function create(ctx) {
     resetPlay();
     headY = Math.max(1.2, Math.min(2.0, input.head.pos.y - rig.position.y));
     rowY = [headY * 0.53, headY * 0.78, headY * 1.03];
-    maxScore = 0; let c = 0;
-    for (const n of song.notes) if (!n.bomb) maxScore += 115 * multFor(c++);
     useAudio = !!(actx && actx.state !== 'closed');
     if (actx && actx.state !== 'running') actx.resume?.();
     clockInit = false; lastPerf = performance.now(); audioWait = 0;
@@ -215,7 +213,7 @@ export async function create(ctx) {
     for (const p of pending) p.on = false;
     halves.clear(); sparks.clear(); popups.clear();
     nextNote = 0; nextWall = 0; kickIdx = 0; lastKick = -10; pulse = 0;
-    score = 0; combo = 0; maxCombo = 0; mult = 1; energy = 0.5; hits = 0; misses = 0; badCuts = 0; bombsHit = 0; multProgress = 0;
+    rawPts = 0; score = 0; combo = 0; maxCombo = 0; mult = 1; energy = 0.5; hits = 0; misses = 0; badCuts = 0; bombsHit = 0; multProgress = 0;
     inWall = false; wallFlash = 0; failTimer = 0; hudDirty = true; results = null;
     for (const b of blades) { b.hasPrev = false; b.trail.reset(); b.histT.fill(-1); }
   }
@@ -263,13 +261,15 @@ export async function create(ctx) {
   }
   function endSong(failed) {
     stopMusic(failed ? 0.9 : 1.5);
-    const acc = Math.max(0, Math.min(1, score / maxScore));
-    const grade = failed ? 'F' : acc >= 0.9 ? 'S' : acc >= 0.8 ? 'A' : acc >= 0.65 ? 'B' : acc >= 0.5 ? 'C' : 'D';
+    // accuracy: average cut quality (out of 115) over every lantern in the chart; multipliers only affect score
+    const total = song.notes.filter(n => !n.bomb).length;
+    const acc = Math.max(0, Math.min(1, rawPts / (115 * Math.max(1, total))));
+    const grade = failed ? 'F' : acc >= 0.88 ? 'S' : acc >= 0.78 ? 'A' : acc >= 0.65 ? 'B' : acc >= 0.5 ? 'C' : 'D';
     const key = `rhythm:best:${song.def.id}:${hard ? 'hard' : 'normal'}`;
     const prev = ctx.load(key, null);
     const newBest = !failed && (!prev || score > prev.score);
     if (newBest) ctx.save(key, { score, grade, acc: Math.round(acc * 1000) / 10, combo: maxCombo });
-    results = { failed, acc, grade, score, maxCombo, hits, misses, badCuts, bombsHit, newBest, prev, total: song.notes.filter(n => !n.bomb).length };
+    results = { failed, acc, grade, score, maxCombo, hits, misses, badCuts, bombsHit, newBest, prev, total };
     for (const n of active) notePool.push(n); active.length = 0;
     for (const w of activeWalls) wallPool.push(w); activeWalls.length = 0;
     setState('results');
@@ -545,7 +545,7 @@ export async function create(ctx) {
     const pd = pending.find(p => !p.on);
     _n.set(n.x, n.y, n.z);
     if (pd) { pd.on = true; pd.blade = b; pd.t = time; pd.dir.copy(b.dir); pd.base = pre + acc + tim; pd.pos.copy(_n); pd.mult = thisMult; pd.side = b.side; }
-    else { score += Math.round((pre + acc + tim) * thisMult); }
+    else { score += Math.round((pre + acc + tim) * thisMult); rawPts += pre + acc + tim; }
     // split into halves along the swing
     const vx = _v.x, vy = _v.y, l = Math.hypot(vx, vy) || 1;
     const sx = vx / l, sy = vy / l;
@@ -598,7 +598,7 @@ export async function create(ctx) {
       const ang = Math.acos(Math.max(-1, Math.min(1, p.dir.dot(p.blade.dir))));
       const follow = 20 * Math.min(1, ang / (Math.PI / 3));
       const pts = Math.round(p.base + follow);
-      score += pts * p.mult;
+      score += pts * p.mult; rawPts += pts;
       const q = pts >= 105 ? '#e2b85c' : pts >= 85 ? '#f1e6cf' : '#a8a0c0';
       popups.spawn(p.pos, String(pts), q, p.mult > 1 ? `×${p.mult}` : '');
       hudDirty = true;
@@ -654,7 +654,7 @@ export async function create(ctx) {
     if (inside) {
       energy -= 0.3 * dt;
       wallFlash = Math.max(wallFlash, 0.5);
-      if (!inWall) { breakCombo(); sfx.wall(); }
+      if (!inWall) { breakCombo(); sfx.wall(); wallHits++; }
       if (Math.random() < dt * 12) { input.left.haptic(0.5, 30); input.right.haptic(0.5, 30); }
       hudDirty = true;
     }
@@ -667,11 +667,11 @@ export async function create(ctx) {
       const bob = Math.sin(time * 3 + n.t * 2) * 0.015;
       if (n.bomb) {
         _q.setFromAxisAngle(_n.set(0, 1, 0), time * 1.5 + n.t);
-        _s.setScalar(1.1); _v.set(n.x, n.y + bob, n.z);
+        _s.setScalar(Math.max(0.02, Math.min(1.1, 1.1 - (n.z + 0.85) / 0.8))); _v.set(n.x, n.y + bob, n.z);
         _m.compose(_v, _q, _s); bombs.setMatrixAt(nbo++, _m);
         continue;
       }
-      const sc = Math.min(1, 0.3 + (n.y - WATER_Y) * 1.2, Math.max(0.02, 1 - (n.z + 0.4) / 0.8)); // shrink once past the player
+      const sc = Math.min(1, 0.3 + (n.y - WATER_Y) * 1.2, Math.max(0.02, 1 - (n.z + 0.85) / 0.8)); // shrink once past the hit plane
       _q.identity(); _s.setScalar(sc); _v.set(n.x, n.y + bob, n.z);
       _m.compose(_v, _q, _s); bodies.setMatrixAt(nb, _m); bodies.setColorAt(nb, COLORS[n.hand]); nb++;
       // glyph on the front face
@@ -687,7 +687,7 @@ export async function create(ctx) {
       _m.compose(_v, _q, _s); glows.setMatrixAt(ng, _m); _c.copy(COLORS[n.hand]).multiplyScalar(0.55); glows.setColorAt(ng, _c); ng++;
     }
     bodies.count = nb; arrows.count = na; dots.count = nd; glows.count = ng; bombs.count = nbo;
-    for (const m of [bodies, arrows, dots, glows, bombs]) m.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < noteMeshes.length; i++) noteMeshes[i].instanceMatrix.needsUpdate = true;
     if (bodies.instanceColor) bodies.instanceColor.needsUpdate = true;
     if (glows.instanceColor) glows.instanceColor.needsUpdate = true;
     let nw = 0;
@@ -775,7 +775,8 @@ export async function create(ctx) {
         if (prog !== lastProgressDraw) { lastProgressDraw = prog; hudDirty = true; }
         if (hudDirty && hudTimer <= 0) { drawHud(); hudTimer = 0.08; }
       }
-      if (playing) ctx.setHud(`<b>${song.def.title}</b> · score ${score.toLocaleString()} · combo ${combo} ×${mult} · light ${Math.round(energy * 100)}% · <i>mouse swings · A/D lean · S duck · R pause</i>`);
+      if (!input.desktop || ctx.isXR()) { /* HUD line is desktop-only */ }
+      else if (playing) ctx.setHud(`<b>${song.def.title}</b> · score ${score.toLocaleString()} · combo ${combo} ×${mult} · light ${Math.round(energy * 100)}% · <i>mouse swings · A/D lean · S duck · R pause</i>`);
       else if (state === 'menu') ctx.setHud('Look at a song and click to play · Tab: hub');
       else ctx.setHud('');
     },
@@ -792,8 +793,8 @@ export async function create(ctx) {
     // test/debug hooks
     _debug: {
       get state() { return state; }, get songPos() { return songPos; }, get active() { return active; }, get song() { return song; },
-      get stats() { return { lastBad, score, combo, maxCombo, mult, energy, hits, misses, badCuts, bombsHit, useAudio, state, songPos }; },
-      get blades() { return blades; },
+      get stats() { return { wallHits, lastBad, score, combo, maxCombo, mult, energy, hits, misses, badCuts, bombsHit, useAudio, state, songPos }; },
+      get blades() { return blades; }, get walls() { return activeWalls.map(w => ({ type: w.type, zf: +w.zf.toFixed(2), zb: +w.zb.toFixed(2), y0: +w.y0.toFixed(2) })); },
       start: (i, h = false, from = 0) => { hard = h; startSong(i, from); },
       finish: () => endSong(false),
       setEnergy: (e) => { energy = e; },

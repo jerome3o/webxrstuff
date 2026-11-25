@@ -14,6 +14,7 @@ uniform vec3 uBlockLight;
 uniform float uItemLight;
 uniform vec3 uSunDir;
 uniform float uSunAmt;
+uniform float uFogSph;
 out vec2 vUv;
 out float vLayer;
 out vec3 vLight;
@@ -45,7 +46,8 @@ void main() {
   vec3 aoCol = mix(vec3(0.36, 0.33, 0.48), vec3(1.0), a * 0.85 + 0.15 * a * a);
   vLight = L * shade * tint * aoCol;
   vec4 mv = viewMatrix * wp;
-  vDist = length(mv.xyz);
+  // cylindrical fog (chunks stream in a horizontal radius); spherical underwater
+  vDist = mix(length(wp.xz - cameraPosition.xz), length(mv.xyz), uFogSph);
   gl_Position = projectionMatrix * mv;
 }`;
 
@@ -94,6 +96,7 @@ export function createChunkMaterials(atlas) {
     uItemLight: { value: 1 },
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
     uSunAmt: { value: 0.3 },
+    uFogSph: { value: 0 },
     uOpacity: { value: 0.72 },
   };
   const opaque = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, toneMapped: false });

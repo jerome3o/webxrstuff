@@ -5,6 +5,7 @@ import { BLOCKS } from './blocks.js';
 // player when near. Follows the entity interface: { update(dt) → false when finished, dispose(), dead }.
 const _t = new THREE.Vector3();
 const lightOut = { sky: 15, block: 0 };
+const AXES = ['x', 'z'];
 
 export class ItemDrop {
   constructor(game, id, count, pos, vel = null) {
@@ -44,7 +45,7 @@ export class ItemDrop {
       const below = g.world.getBlock(Math.floor(p.x), Math.floor(ny - this.half), Math.floor(p.z));
       if (v.y < 0 && (below < 0 || BLOCKS[below]?.solid)) { p.y = Math.floor(ny - this.half) + 1 + this.half; v.y = 0; v.x *= 0.6; v.z *= 0.6; }
       else p.y = ny;
-      for (const ax of ['x', 'z']) {
+      for (const ax of AXES) {
         const n = p[ax] + v[ax] * dt;
         const q = ax === 'x' ? g.world.getBlock(Math.floor(n), Math.floor(p.y), Math.floor(p.z)) : g.world.getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(n));
         if (q < 0 || BLOCKS[q]?.solid) v[ax] = 0; else p[ax] = n;

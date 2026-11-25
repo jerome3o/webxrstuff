@@ -190,7 +190,7 @@ export function buildEnvironment(scene, { hitZ, spawnZ }) {
   const fl = [];
   const fc = new THREE.Color();
   for (let i = 0; i < NF; i++) {
-    let x = (Math.random() * 2 - 1) * 16; if (Math.abs(x) < 2.4) x = Math.sign(x || 1) * (2.4 + Math.random() * 3);
+    let x = (Math.random() * 2 - 1) * 16; if (Math.abs(x) < 3.2) x = Math.sign(x || 1) * (3.2 + Math.random() * 3);
     fl.push({ x, z: -Math.random() * 180 - 3, ph: Math.random() * 6, sp: 0.25 + Math.random() * 0.3 });
     fc.setHSL(0.03 + Math.random() * 0.1, 0.95, 0.5 + Math.random() * 0.15);
     floats.setColorAt(i, fc); refl.setColorAt(i, fc.multiplyScalar(0.5));

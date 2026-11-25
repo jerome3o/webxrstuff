@@ -139,6 +139,7 @@ export class Grabber {
       b.angVel.copy(_w);
     }
     this.applyAssist(b);
+    b.user.stall?.onRelease?.(b);
     const sp = b.vel.length();
     if (sp > 25) b.vel.multiplyScalar(25 / sp);
     const u = b.user;
@@ -217,13 +218,13 @@ export class Grabber {
     }
     // held: pull back while charging
     if (h.triggerDown) { st.charging = true; st.charge = 0; }
-    if (st.charging) st.charge = Math.min(1, st.charge + dt / 1.1);
+    if (st.charging) st.charge = Math.min(1, st.charge + dt / 1.3);
     this._follow(st, h, dt);
     if (st.charging) { const head = input.head; st.held.pos.addScaledVector(head.fwd, -0.12 * st.charge).addScaledVector(head.up, -0.04 * st.charge); }
     if (st.charging && h.triggerUp) {
       const head = input.head, b = st.held;
       b.pos.copy(head.pos).addScaledVector(head.fwd, 0.35).addScaledVector(head.up, -0.07);
-      const speed = 2.2 + 11.8 * st.charge;
+      const speed = 2 + 12 * st.charge * st.charge;  // finer control at the gentle end (rings, coins, rolls)
       _v.copy(head.fwd).multiplyScalar(speed);
       _w.set(0, 0, 0);
       if (b.user.kind === 'Ring' || b.user.kind === 'Coin') _w.copy(head.up).multiplyScalar(8);   // frisbee spin keeps rings/coins flat

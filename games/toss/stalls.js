@@ -391,7 +391,7 @@ export class RingStall extends Stall {
   trayPose(i, p, q) { this.frame.toWorld(-0.6 + i * 0.3, 1.0 + 0.0085, -0.24, p); q.copy(this.frame.q); }
   ringedBottle(r) {
     _up.set(0, 1, 0).applyQuaternion(r.quat);
-    if (Math.abs(_up.y) < 0.35) return -1;
+    if (Math.abs(_up.y) < 0.25) return -1;
     for (let k = 0; k < this.bottles.length; k++) {
       const b = this.bottles[k];
       const y = r.pos.y - (_up.x * (b.x - r.pos.x) + _up.z * (b.z - r.pos.z)) / _up.y;
@@ -654,7 +654,7 @@ export class SkeeStall extends Stall {
     const fr = this.frame, F = fr.m, L = game.lit;
     const laneCol = 0xc89a5a, railCol = 0x7a2a1a;
     // lane: z +0.38 (y 0.80) to z -2.9 (y 0.98)
-    const z0 = 0.38, z1 = -2.9, y0 = 0.8, y1 = 0.98;
+    const z0 = 0.38, z1 = -2.9, y0 = 0.8, y1 = 0.9;
     const len = Math.hypot(z0 - z1, y1 - y0), a = Math.atan2(y1 - y0, z0 - z1);
     const cz = (z0 + z1) / 2, cy = (y0 + y1) / 2;
     const off = (d) => [cy - Math.cos(a) * d, cz - Math.sin(a) * d]; // move along lane normal (downwards)
@@ -672,14 +672,14 @@ export class SkeeStall extends Stall {
     L.box(F, 0, 0.86, 0.42, 0.74, 0.12, 0.05, railCol);
     staticBox(game, fr, 0, 0.86, 0.42, 0.74, 0.14, 0.05, { restitution: 0.2 });
     // hump (z -2.9 -> -3.15 rising to 1.12)
-    const ha = Math.atan2(0.14, 0.25);
-    L.box(F, 0, 1.05 - 0.045, -3.025, 0.66, 0.08, 0.29, 0xe0b060, ha);
-    staticBox(game, fr, 0, 1.05 - 0.045, -3.025, 0.66, 0.08, 0.29, { rx: ha, friction: 0.4, restitution: 0.1 });
-    // gutter floor (gap z -3.15 .. -3.42)
-    L.box(F, 0, 0.55, -3.3, 0.9, 0.04, 0.4, 0x201010);
-    staticBox(game, fr, 0, 0.55, -3.3, 0.9, 0.04, 0.4);
-    // target board: from (z -3.42, y 0.98) to (z -4.32, y 1.6)
-    const tz0 = -3.42, tz1 = -4.32, ty0 = 0.98, ty1 = 1.6;
+    const ha = Math.atan2(0.12, 0.25), hy = y1 + 0.06 - Math.cos(ha) * 0.04, hz = z1 - 0.125 - Math.sin(ha) * 0.04;
+    L.box(F, 0, hy, hz, 0.66, 0.08, 0.29, 0xe0b060, ha);
+    staticBox(game, fr, 0, hy, hz, 0.66, 0.08, 0.29, { rx: ha, friction: 0.4, restitution: 0.1 });
+    // gutter (gap z -3.15 .. -3.28)
+    L.box(F, 0, 0.55, -3.0, 0.94, 0.04, 0.8, 0x201010);
+    staticBox(game, fr, 0, 0.55, -3.0, 0.94, 0.04, 0.8);
+    // target board: from (z -3.28, y 1.0) to (z -4.32, y 1.62)
+    const tz0 = -3.31, tz1 = -4.15, ty0 = 0.94, ty1 = 1.42;
     this.tLen = Math.hypot(tz0 - tz1, ty1 - ty0); this.tA = Math.atan2(ty1 - ty0, tz0 - tz1);
     this.tz0 = tz0; this.ty0 = ty0;
     const tcz = (tz0 + tz1) / 2, tcy = (ty0 + ty1) / 2;
@@ -697,8 +697,8 @@ export class SkeeStall extends Stall {
     L.box(F, 0, 2.15, -3.6, 1.0, 0.02, 1.7, 0x2a2a30);
     // board face texture (holes + rings)
     this.holes = [
-      { u: 0, v: 0.2, r: 0.11, pts: 10 }, { u: 0, v: 0.42, r: 0.085, pts: 20 }, { u: 0, v: 0.62, r: 0.075, pts: 30 },
-      { u: 0, v: 0.8, r: 0.07, pts: 40 }, { u: 0, v: 0.96, r: 0.065, pts: 50 }, { u: -0.33, v: 0.98, r: 0.06, pts: 100 }, { u: 0.33, v: 0.98, r: 0.06, pts: 100 },
+      { u: 0, v: 0.15, r: 0.105, pts: 10 }, { u: 0, v: 0.33, r: 0.085, pts: 20 }, { u: 0, v: 0.49, r: 0.075, pts: 30 },
+      { u: 0, v: 0.64, r: 0.07, pts: 40 }, { u: 0, v: 0.79, r: 0.065, pts: 50 }, { u: -0.34, v: 0.9, r: 0.056, pts: 100 }, { u: 0.34, v: 0.9, r: 0.056, pts: 100 },
     ];
     const tex = skeeBoardTexture(this.holes, 0.9, this.tLen);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(0.9, this.tLen), new THREE.MeshBasicMaterial({ map: tex }));
@@ -709,10 +709,11 @@ export class SkeeStall extends Stall {
     // balls
     this.ballSet = new PropSet(game.scene, new THREE.SphereGeometry(0.05, 14, 10), game.mats.skee, 6);
     const cc = [0xff6040, 0xffc040, 0x60c0ff, 0x80ff80, 0xff80d0, 0xffffff];
-    for (let i = 0; i < 6; i++) this.addProjectile(new Body({ kind: SPHERE, r: 0.05 }, { mass: 0.17, restitution: 0.25, friction: 0.5, rolling: 0.12, linDamp: 0.05, tag: 'skee' }), this.ballSet, cc[i]);
+    for (let i = 0; i < 6; i++) this.addProjectile(new Body({ kind: SPHERE, r: 0.05 }, { mass: 0.17, restitution: 0.25, friction: 0.5, rolling: 0.02, linDamp: 0.02, tag: 'skee' }), this.ballSet, cc[i]);
     this.points = 0;
     this.laneA = a; this.laneZ0 = z0; this.laneY0 = y0;
-    this.targetsOut = [fr.toWorld(0, 1.0, -2.95)];
+    this.targetsOut = [fr.toWorld(0, 0.95, -2.95)];
+    game.substepHooks.push(() => this.checkHoles());
     this.resetRound();
   }
   trayPose(i, p, q) {
@@ -721,21 +722,30 @@ export class SkeeStall extends Stall {
     this.frame.toWorld(-0.25 + i * 0.1, y, z, p); q.copy(this.frame.q);
   }
   resetTargets() { this.points = 0; this.sunk = 0; }
+  // a bowled ball leaves the hand already rolling (no slide-to-roll energy loss)
+  onRelease(b) { b.angVel.set(b.vel.z, 0, -b.vel.x).divideScalar(0.05); }
   liveScore() { return this.points; }
   scoreText() { return `Points ${this.points}`; }
   ticketsFor(s) { return Math.floor(s / 30); }
   resultText(s) { return `${s} points`; }
   get bigWin() { return 8; }
-  updateGame(dt, t) {
-    const fr = this.frame;
+  updateGame() {
     for (const p of this.projectiles) {
       const u = p.user;
       if (p.held || !p.enabled || u.spent) continue;
+      // rolled back down to the player without reaching the target: allow a re-roll
+      if (u.inPlay && this.frame.toLocal(p.pos, _v).z > -0.6 && _v.y < 1.0) { u.inPlay = false; u.released = false; }
+    }
+  }
+  // per physics substep so fast rolling balls can't skip over a hole between frames
+  checkHoles() {
+    const fr = this.frame;
+    for (const p of this.projectiles) {
+      const u = p.user;
+      if (p.held || !p.enabled || u.spent || !u.released) continue;
       fr.toLocal(p.pos, _v);
-      // rolled back down to the player: allow a re-roll
-      if (u.inPlay && _v.z > -0.6 && _v.y < 1.0) { u.inPlay = false; u.released = false; }
       // gutter / fell behind the target
-      if (_v.z < -3.1 && _v.y < 0.75 && Math.abs(_v.x) < 0.5) { this.sink(p, 0); continue; }
+      if (_v.z < -2.55 && _v.y < 0.75) { this.sink(p, 0); continue; }
       // target board coordinates
       const dz = this.tz0 - _v.z, dy = _v.y - this.ty0;
       const along = dz * Math.cos(this.tA) + dy * Math.sin(this.tA);
@@ -743,7 +753,7 @@ export class SkeeStall extends Stall {
       if (along > 0 && along < this.tLen && h < 0.05 + 0.02 && Math.abs(_v.x) < 0.45) {
         for (const hole of this.holes) {
           const du = _v.x - hole.u, dv = along - hole.v;
-          if (du * du + dv * dv < (hole.r - 0.012) ** 2) { this.sink(p, hole.pts); break; }
+          if (du * du + dv * dv < (hole.r - 0.006) ** 2) { this.sink(p, hole.pts); break; }
         }
       }
     }
@@ -937,7 +947,7 @@ function skeeBoardTexture(holes, w, h) {
   x.strokeStyle = '#ffd060'; x.lineWidth = 6; x.strokeRect(3, 3, c.width - 6, c.height - 6);
   const cxp = c.width / 2;
   for (const [r, col] of [[0.43, '#7a3a8a'], [0.34, '#9a4aa0'], [0.25, '#b85ab0'], [0.16, '#d070c0']]) {
-    x.fillStyle = col; x.beginPath(); x.ellipse(cxp, (h - 0.82) * sy, r * sx, r * sy * 1.25, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = col; x.beginPath(); x.ellipse(cxp, (h - 0.6) * sy, r * sx, r * sy * 1.25, 0, 0, Math.PI * 2); x.fill();
   }
   for (const hole of holes) {
     const px = cxp + hole.u * sx, py = (h - hole.v) * sy;

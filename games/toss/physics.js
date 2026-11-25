@@ -504,7 +504,7 @@ export class World {
       if (!this._active(b) || b.sleeping) continue;
       if (b.touching > 0 && b.rolling > 0) { const f = Math.max(0, 1 - b.rolling * dt * 6); b.angVel.multiplyScalar(f); }
       const vl = b.vel.lengthSq(); if (vl > 1600) b.vel.multiplyScalar(40 / Math.sqrt(vl));
-      const wl = b.angVel.lengthSq(); if (wl > 3600) b.angVel.multiplyScalar(60 / Math.sqrt(wl));
+      const wl = b.angVel.lengthSq(); if (wl > 40000) b.angVel.multiplyScalar(200 / Math.sqrt(wl));
       b.pos.x += b.vel.x * dt; b.pos.y += b.vel.y * dt; b.pos.z += b.vel.z * dt;
       if (!b.noRotate) {
         const q = b.quat, wx = b.angVel.x, wy = b.angVel.y, wz = b.angVel.z, h = 0.5 * dt;

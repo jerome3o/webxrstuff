@@ -42,8 +42,8 @@ function paintClouds() {
   const val = (x, y) => { const fx = x / (N / G), fy = y / (N / G), ix = Math.floor(fx), iy = Math.floor(fy); let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty); const a = grid[(ix % G) + (iy % G) * G], b = grid[((ix + 1) % G) + (iy % G) * G], cc = grid[(ix % G) + ((iy + 1) % G) * G], d = grid[((ix + 1) % G) + ((iy + 1) % G) * G]; return (a * (1 - tx) + b * tx) * (1 - ty) + (cc * (1 - tx) + d * tx) * ty; };
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const v = val(x, y) * 0.75 + val((x * 2) % N, (y * 2) % N) * 0.25;
-    const i = (x + y * N) * 4, on = v > 0.6;
-    img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255; img.data[i + 3] = on ? (v > 0.66 ? 235 : 170) : 0;
+    const i = (x + y * N) * 4, on = v > 0.55;
+    img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255; img.data[i + 3] = on ? (v > 0.62 ? 235 : 175) : 0;
   }
   g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
@@ -100,11 +100,11 @@ export class Sky {
 
     // clouds: one big plane, texture scrolls; world-anchored via uv offset
     const ct = paintClouds();
-    this.cloudU = { map: { value: ct }, uOff: { value: new THREE.Vector2() }, uCol: { value: new THREE.Color(1, 1, 1) }, uScale: { value: 1 / 384 } };
+    this.cloudU = { map: { value: ct }, uOff: { value: new THREE.Vector2() }, uCol: { value: new THREE.Color(1, 1, 1) }, uScale: { value: 1 / 256 } };
     const cm = new THREE.ShaderMaterial({
       uniforms: this.cloudU, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      vertexShader: `uniform vec2 uOff; uniform float uScale; varying vec2 vUv; varying float vD; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vUv = w.xz * uScale + uOff; vec4 mv = viewMatrix * w; vD = length(mv.xz); gl_Position = projectionMatrix * mv; }`,
-      fragmentShader: `uniform sampler2D map; uniform vec3 uCol; varying vec2 vUv; varying float vD; void main(){ vec4 t = texture2D(map, vUv); float a = t.a * (1.0 - smoothstep(160.0, 420.0, vD)); if (a < 0.01) discard; gl_FragColor = vec4(uCol, a * 0.85);
+      vertexShader: `uniform vec2 uOff; uniform float uScale; varying vec2 vUv; varying vec2 vRel; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vUv = w.xz * uScale + uOff; vRel = w.xz - cameraPosition.xz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform sampler2D map; uniform vec3 uCol; varying vec2 vUv; varying vec2 vRel; void main(){ vec4 t = texture2D(map, vUv); float a = t.a * (1.0 - smoothstep(160.0, 420.0, length(vRel))); if (a < 0.01) discard; gl_FragColor = vec4(uCol, a * 0.85);
         #include <colorspace_fragment>
       }`,
     });

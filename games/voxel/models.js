@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BLOCKS } from './blocks.js';
+import { BLOCKS, faceTile } from './blocks.js';
 import { ITEMS } from './items.js';
 import { blockGeometry } from './materials.js';
 
@@ -93,7 +93,6 @@ export class ItemModels {
   dispose() { for (const g of this.spriteGeo.values()) g.dispose(); this.spriteGeo.clear(); this.spriteMat.dispose(); }
 }
 
-import { faceTile } from './blocks.js';
 const faceTileName = (b, f) => faceTile(b, f);
 
 // Per-object light for block items: set the item material's uniform just before drawing.

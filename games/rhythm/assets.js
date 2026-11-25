@@ -153,7 +153,7 @@ export function makeGlowTexture(inner = 'rgba(255,255,255,1)', mid = 'rgba(255,2
 // Vermilion lattice screen for obstacle walls.
 export function makeLatticeTexture() {
   return canvasTex(256, 256, (c, W, H) => {
-    c.fillStyle = 'rgba(255,70,40,0.22)'; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(255,70,40,0.14)'; c.fillRect(0, 0, W, H);
     c.strokeStyle = 'rgba(255,140,90,0.75)'; c.lineWidth = 4;
     for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(i * W / 6, 0); c.lineTo(i * W / 6, H); c.stroke(); c.beginPath(); c.moveTo(0, i * H / 6); c.lineTo(W, i * H / 6); c.stroke(); }
     c.strokeStyle = 'rgba(255,200,150,1)'; c.lineWidth = 14; c.strokeRect(7, 7, W - 14, H - 14);

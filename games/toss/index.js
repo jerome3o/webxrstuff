@@ -184,6 +184,8 @@ export async function create(ctx) {
     spawn: { x: 0, z: 1.6, yaw: 0 },
     update,
     dispose() { sounds.dispose(); ctx.setHud(''); },
+    onXRStart() { settings.markDirty(); },
+    onXREnd() { settings.markDirty(); },
     debug: { game, world, stalls, prize, data, logic, PRIZES,
       simulate(sec, step = 1 / 60) { for (let k = 0; k < sec / step; k++) logic(step); },
       drawCalls: () => ctx.renderer.info.render.calls,

@@ -268,7 +268,7 @@ export class Interaction {
         const isBlock = id < 256;
         this.heldObj.scale.setScalar(isBlock ? 0.085 : 0.15);
         if (isBlock) { this.heldObj.position.set(0, 0.0, -0.07); this.heldObj.rotation.set(0, 0.6, 0); }
-        else { this.heldObj.rotation.set(-0.85, 1.15, -Math.PI / 4, 'YXZ'); this.heldObj.position.set(0, 0.04, -0.05); }
+        else { this.heldObj.rotation.set(-0.55, 0.5, -Math.PI / 4, 'YXZ'); this.heldObj.position.set(0, 0.05, -0.06); }
         this.held.add(this.heldObj);
       }
       this.heldId = id;
