@@ -89,6 +89,8 @@ export async function create(ctx) {
   const tele = new Teleporter(scene, { isValid: (p) => p.x > BOUNDS.x0 - 0.2 && p.x < BOUNDS.x1 + 0.2 && p.z > BOUNDS.z0 - 0.2 && p.z < BOUNDS.z1 + 0.2 });
   game.grabber.assist = ASSIST_LEVELS[data.assist] ?? 0.35;
   game.setTurn = (v) => { loco.smoothTurn = v; };
+  // teleport on the main stick (push forward, release); the off stick is for smooth walking
+  const teleInput = { get desktop() { return input.desktop; }, get main() { return input.main; }, off: { present: false, axes: [0, 0] }, head: input.head };
 
   // ── VR wrist ticket display ──
   wrist = new Panel({
@@ -135,7 +137,7 @@ export async function create(ctx) {
   function update(dt, t) {
     sounds.update(dt, t);
     // movement
-    const telePorted = tele.update(input, rig);
+    const telePorted = tele.update(teleInput, rig);
     if (!tele.hand) loco.update(dt, input, rig);
     if (telePorted) sounds.click();
     rig.updateMatrixWorld(true);
@@ -244,7 +246,7 @@ function buildStreet(game) {
   game.lamps.push({ x: 0, y: 3.0, z: 3.4, color: new THREE.Color(1, 0.6, 0.35), intensity: 1.2, range: 6 });
 
   // poles + string lights zig-zagging across the street
-  const zs = [2.6, -5.5, -10.5, -15.5];
+  const zs = [2.6, -5.0, -10.0, -15.4];
   const wires = [];
   for (const z of zs) for (const sx of [-1, 1]) {
     L.box(null, sx * 1.95, 1.9, z, 0.1, 3.8, 0.1, 0x6a1a14);
