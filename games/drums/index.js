@@ -14,6 +14,7 @@ const LEAD = 1.6;            // seconds a lesson marker is visible before its hi
 const WIN_PERFECT = 0.05, WIN_GOOD = 0.11, WIN_MISS = 0.15;
 const FAMILY_COLOR = { drum: 0xff6a3a, bell: 0xc8f08a, gong: 0xffc040, cymbal: 0x8ad8ff, wood: 0xe0a8ff };
 const UP = new THREE.Vector3(0, 1, 0);
+const DIGITS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'];
 
 export async function create(ctx) {
   const { scene, input, rig } = ctx;
@@ -602,7 +603,7 @@ export async function create(ctx) {
         if (input.keyDown('BracketLeft')) { setBpm(tr.bpm - 4); menu.markDirty(); }
         if (input.keyDown('BracketRight')) { setBpm(tr.bpm + 4); menu.markDirty(); }
         if (input.keyDown('KeyK')) { recToggle(); menu.markDirty(); }
-        for (let i = 0; i < LESSONS.length; i++) if (input.keyDown('Digit' + (i + 1))) startLesson(i);
+        for (let i = 0; i < LESSONS.length; i++) if (input.keyDown(DIGITS[i])) startLesson(i);
         if (input.keyDown('Digit0') && mode === 'lesson') stopLesson();
       } else hoverRing.visible = false;
 

@@ -160,7 +160,7 @@ export async function create(ctx) {
     if (p.headInWater) {
       u.uFogNear.value = 0.5; u.uFogFar.value = 14 * p.scale;
       u.uFogColor.value.copy(waterFog).multiplyScalar(0.3 + 0.7 * game.sky.daylight);
-    } else { u.uFogNear.value = far * 0.45; u.uFogFar.value = far; }
+    } else { u.uFogNear.value = far * 0.6; u.uFogFar.value = far; }
   }
 
   function hud() {

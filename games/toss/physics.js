@@ -395,9 +395,11 @@ export class World {
       }
     }
     // 4. iterations
+    const nc = this.nc;
     for (let it = 0; it < this.iterations; it++) {
-      for (let i = 0; i < this.nc; i++) {
-        const o = i * S;
+      const rev = it & 1; // alternate sweep direction to cancel Gauss-Seidel ordering bias
+      for (let ii = 0; ii < nc; ii++) {
+        const i = rev ? nc - 1 - ii : ii, o = i * S;
         const nx = C[o], ny = C[o + 1], nz = C[o + 2];
         let vn = this._relVel(i, nx, ny, nz);
         let lam = (C[o + 21] - vn) * C[o + 15];
