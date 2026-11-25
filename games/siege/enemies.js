@@ -9,7 +9,7 @@ export const ENEMIES = [
   { id: 'kite', name: 'Ink Kite', hp: 55, speed: 1.2, reward: 10, dmg: 1, size: 0.5, armor: 0, flying: true, max: 40 },
   { id: 'split', name: 'Splitter', hp: 130, speed: 0.85, reward: 10, dmg: 2, size: 0.5, armor: 0, splits: 3, max: 32 },
   { id: 'mite', name: 'Mite', hp: 22, speed: 1.35, reward: 3, dmg: 1, size: 0.24, armor: 0, max: 96 },
-  { id: 'boss', name: 'Great Smudge', hp: 2400, speed: 0.48, reward: 220, dmg: 10, size: 1.2, armor: 5, boss: true, max: 4 },
+  { id: 'boss', name: 'Great Smudge', hp: 2100, speed: 0.48, reward: 220, dmg: 10, size: 1.2, armor: 5, boss: true, max: 4 },
 ];
 export const E = {}; ENEMIES.forEach((d, i) => { d.idx = i; E[d.id] = i; });
 

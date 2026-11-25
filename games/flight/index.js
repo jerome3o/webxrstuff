@@ -430,8 +430,8 @@ export async function create(ctx) {
     const onDeck = Math.hypot(headW.x - PERCH.x, headW.z - PERCH.z) < 12 && rig.position.y > perchY - 3;
     if (onDeck && rig.position.y < perchY) rig.position.y = perchY;
     S.grace = Math.max(0, S.grace - dt);
-    if (S.grace > 0 && rig.position.y < gy) rig.position.y = gy;
-    if (rig.position.y <= gy && !onDeck && S.grace <= 0) {
+    if (S.grace > 0 && rig.position.y < gy && gy - rig.position.y < 0.6) rig.position.y = gy;
+    if (rig.position.y < gy - 0.001 && !onDeck) {
       const sl = sampler.slope(headW.x, headW.z);
       rig.position.y = gy;
       S.state = 'landing';
