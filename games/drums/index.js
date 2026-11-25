@@ -515,6 +515,8 @@ export async function create(ctx) {
     set sweepOnDesktop(v) { sweepOnDesktop = v; },
     startLesson, stopLesson, recToggle, setBpm,
     setGroove(v) { groove = v; },
+    setMove(v) { moveState.on = v; moveLabel.visible = v; menu.markDirty(); },
+    kitPose: () => ({ x: kitRoot.position.x, y: kitRoot.position.y, z: kitRoot.position.z, yaw: kitRoot.rotation.y }),
     lessonNotes: () => lesson?.notes.map(n => ({ time: n.time, pad: pads[n.pad].id, judged: n.judged })),
     audioTime: () => A?.ac.currentTime, latency,
     get audio() { return A; },

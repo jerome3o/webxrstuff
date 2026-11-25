@@ -141,6 +141,7 @@ export class Body {
 
 // ── math scratch (module level, reused) ───────────────────────
 const N = { x: 0, y: 0, z: 0 };   // sdf normal output
+const EDGE_BIAS = 0.004;
 const L = { x: 0, y: 0, z: 0 };   // local point
 function rot(q, x, y, z, out) {
   const qx = q.x, qy = q.y, qz = q.z, qw = q.w;
@@ -182,8 +183,9 @@ function sdfLocal(b, px, py, pz) {
         N.x = (px < 0 ? -ox : ox) / l; N.y = (py < 0 ? -oy : oy) / l; N.z = (pz < 0 ? -oz : oz) / l;
         return l;
       }
-      if (ax >= ay && ax >= az) { N.x = px < 0 ? -1 : 1; N.y = 0; N.z = 0; return ax; }
-      if (ay >= az) { N.x = 0; N.y = py < 0 ? -1 : 1; N.z = 0; return ay; }
+      // inside: nearest face, biased toward the top/bottom faces (stable stacking near edges)
+      if (ay >= ax - EDGE_BIAS && ay >= az - EDGE_BIAS) { N.x = 0; N.y = py < 0 ? -1 : 1; N.z = 0; return ay; }
+      if (ax >= az) { N.x = px < 0 ? -1 : 1; N.y = 0; N.z = 0; return ax; }
       N.x = 0; N.y = 0; N.z = pz < 0 ? -1 : 1; return az;
     }
     case CYL: {
@@ -195,7 +197,7 @@ function sdfLocal(b, px, py, pz) {
         N.x = rx * ox / l; N.y = sy * oy / l; N.z = rz * ox / l;
         return l;
       }
-      if (dx > dy) { N.x = rx; N.y = 0; N.z = rz; return dx; }
+      if (dx > dy + EDGE_BIAS) { N.x = rx; N.y = 0; N.z = rz; return dx; }
       N.x = 0; N.y = sy; N.z = 0; return dy;
     }
     case TORUS: {
