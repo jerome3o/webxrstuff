@@ -31,7 +31,6 @@ export async function create(ctx) {
   const conductor = actx ? new Conductor(actx, ctx.audio.out, noise) : null;
   const sfxBus = actx ? actx.createGain() : null;
   if (sfxBus) { sfxBus.gain.value = 0.8; sfxBus.connect(ctx.audio.out); }
-  let suspendedByUs = false;
 
   function sfxOut(pan) {
     const g = actx.createGain();
@@ -144,7 +143,6 @@ export async function create(ctx) {
   let rowY = [0.85, 1.25, 1.65], headY = 1.6;
   let wallHits = 0, deskActive = 1, results = null, lastBad = null, resumeAt = 0;
   const cursor = { x: 0.3, y: -0.1 };
-  const timers = [];
 
   // pools
   const notePool = [], active = [];
@@ -256,7 +254,6 @@ export async function create(ctx) {
     setState('play');
   }
   function quitToMenu() {
-    if (suspendedByUs) { actx.resume(); suspendedByUs = false; }
     stopMusic(0.2); resetPlay(); song = null; setState('menu');
   }
   function endSong(failed) {
@@ -783,9 +780,7 @@ export async function create(ctx) {
     onXREnd() { pause(); },
     dispose() {
       document.removeEventListener('visibilitychange', onVis);
-      for (const t of timers) clearTimeout(t);
       stopMusic(0.05);
-      if (suspendedByUs && actx) { actx.resume(); suspendedByUs = false; }
       try { sfxBus?.disconnect(); } catch { }
       input.lookEnabled = true;
       ctx.setHud('');
