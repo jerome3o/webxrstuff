@@ -7,14 +7,17 @@ import { fbm1, makeCanvas, canvasTexture, rand, FONT_BRUSH } from './util.js';
 export const SUN_DIR = new THREE.Vector3(-0.35, 0.22, -0.9).normalize();
 const FOG_COLOR = new THREE.Color(0xe9c9a0);
 
-export function buildEnvironment(scene, physics) {
+export function buildEnvironment(world, physics) {
   const env = { updaters: [], banners: [], windUniform: { value: new THREE.Vector3(1, 0, 0) } };
-  scene.fog = new THREE.Fog(FOG_COLOR, 60, 520);
-  scene.background = FOG_COLOR.clone();
+  // Everything static goes under one root so bakeStatic() can merge it into few draw calls.
+  const scene = new THREE.Group(); scene.name = 'envRoot'; world.add(scene);
+  env.root = scene;
+  world.fog = new THREE.Fog(FOG_COLOR, 60, 520);
+  world.background = FOG_COLOR.clone();
 
   // Lights: a warm low sun and a hemisphere fill. No shadow maps (standalone-headset budget).
-  const hemi = new THREE.HemisphereLight(0xfbe3c0, 0x4d5a3a, 1.25); scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffd7a0, 2.2); sun.position.copy(SUN_DIR).multiplyScalar(100); scene.add(sun);
+  const hemi = new THREE.HemisphereLight(0xfbe3c0, 0x4d5a3a, 1.25); world.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffd7a0, 2.2); sun.position.copy(SUN_DIR).multiplyScalar(100); world.add(sun);
 
   buildSky(scene);
   buildMountains(scene);
@@ -179,7 +182,7 @@ function buildWalls(scene, physics) {
   x.fillStyle = '#e9d9b0'; x.beginPath(); x.arc(128, 128, 120, 0, Math.PI * 2); x.fill();
   x.fillStyle = '#7a1510'; x.font = `190px ${FONT_BRUSH}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('射', 128, 140);
   const disc = new THREE.Mesh(new THREE.CircleGeometry(2.4, 32), new THREE.MeshLambertMaterial({ map: canvasTexture(c) }));
-  disc.position.set(-9, 3.2, -97.05); scene.add(disc);
+  disc.position.set(-9, 3.2, -97.05); disc.userData.dynamic = true; scene.add(disc);
   disc.userData.redraw = () => { };
   env_backDisc = { canvas: c, mesh: disc };
 }
@@ -340,7 +343,7 @@ function buildPond(scene, pos) {
   const koiGeo = new THREE.SphereGeometry(0.1, 8, 6); koiGeo.scale(0.5, 0.35, 1.4);
   for (let i = 0; i < 7; i++) {
     const m = new THREE.Mesh(koiGeo, new THREE.MeshLambertMaterial({ color: i % 3 === 0 ? 0xf2f0ea : i % 3 === 1 ? 0xf07a20 : 0xd8401a }));
-    m.position.y = 0.04; g.add(m);
+    m.position.y = 0.04; m.userData.dynamic = true; g.add(m);
     koi.push({ m, r: rand(0.6, 1.9), s: rand(0.25, 0.6) * (i % 2 ? 1 : -1), o: rand(0, 6.28) });
   }
   scene.add(g);
@@ -491,8 +494,8 @@ function buildIncenseBurner(scene, pos) {
   }
   const ash = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16), new THREE.MeshLambertMaterial({ color: 0xbab3a6 })); ash.rotation.x = -Math.PI / 2; ash.position.y = 0.85; g.add(ash);
   const stickGeo = new THREE.CylinderGeometry(0.006, 0.006, 1, 5); stickGeo.translate(0, 0.5, 0);
-  const stick = new THREE.Mesh(stickGeo, new THREE.MeshLambertMaterial({ color: 0x9a4a2a })); stick.position.y = 0.85; stick.scale.y = 0.45; g.add(stick);
-  const ember = new THREE.Mesh(new THREE.SphereGeometry(0.01, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5010 })); g.add(ember);
+  const stick = new THREE.Mesh(stickGeo, new THREE.MeshLambertMaterial({ color: 0x9a4a2a })); stick.position.y = 0.85; stick.scale.y = 0.45; stick.userData.dynamic = true; g.add(stick);
+  const ember = new THREE.Mesh(new THREE.SphereGeometry(0.01, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5010 })); ember.userData.dynamic = true; g.add(ember);
   scene.add(g);
   return {
     group: g, stick, ember,
@@ -527,7 +530,7 @@ function buildCranes(scene, env) {
   const white = new THREE.MeshLambertMaterial({ color: 0xf5f2ea, side: THREE.DoubleSide });
   const black = new THREE.MeshLambertMaterial({ color: 0x1a1a1a, side: THREE.DoubleSide });
   for (let i = 0; i < 3; i++) {
-    const g = new THREE.Group();
+    const g = new THREE.Group(); g.userData.dynamic = true;
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), white); body.scale.set(0.6, 0.6, 1.6); g.add(body);
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.8, 5), white); neck.rotation.x = Math.PI / 2 - 0.2; neck.position.set(0, 0.1, -0.7); g.add(neck);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), new THREE.MeshLambertMaterial({ color: 0xc81e1e })); head.position.set(0, 0.2, -1.1); g.add(head);

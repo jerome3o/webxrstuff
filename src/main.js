@@ -10,6 +10,7 @@ import { Game } from './game.js';
 import { WeaponSystem } from './weapons.js';
 import { buildHUD } from './hud.js';
 import { loadFonts, clamp } from './util.js';
+import { bakeStatic } from './batch.js';
 
 // ── Renderer & scene ─────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -37,6 +38,9 @@ const game = new Game({ scene, physics, fx, ui, env });
 game.populate();
 const weapons = new WeaponSystem(scene, game, renderer);
 const hud = buildHUD(scene, ui, game, weapons);
+// Merge the static environment into a handful of draw calls.
+const baked = bakeStatic(env.root, new Set(physics.staticMeshes));
+console.info(`[perf] static meshes ${baked.before} → ${baked.after} draw calls`);
 weapons.bow.setSkin(game.skin);
 game.onSkin = (s) => weapons.bow.setSkin(s);
 audio.musicOn = game.settings.music;
@@ -89,6 +93,61 @@ function readXRHand(h, out) {
     } catch { /* haptics are optional */ }
   };
 }
+
+// ── Teleport + recenter ──────────────────────────────────────
+const TP_BOUNDS = { x0: -15, x1: 15, z0: -94, z1: 7 };
+const tp = { hand: null, valid: false, point: new THREE.Vector3() };
+const TP_N = 90;
+const tpGeo = new THREE.BufferGeometry();
+tpGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TP_N * 3), 3));
+const tpLine = new THREE.Line(tpGeo, new THREE.LineBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.9 }));
+tpLine.frustumCulled = false; tpLine.visible = false; scene.add(tpLine);
+const tpMarker = new THREE.Group();
+{
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.4, 32), new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; tpMarker.add(ring);
+  const dot = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), ring.material); dot.rotation.x = -Math.PI / 2; tpMarker.add(dot);
+  const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 3), ring.material); arrow.rotation.x = -Math.PI / 2; arrow.position.z = -0.55; tpMarker.add(arrow);
+}
+tpMarker.visible = false; scene.add(tpMarker);
+
+function updateTeleportArc(hand) {
+  const p = hand.rayPos.clone();
+  const v = new THREE.Vector3(0, 0, -1).applyQuaternion(hand.rayQuat).multiplyScalar(13);
+  const arr = tpGeo.attributes.position.array;
+  let n = 0; tp.valid = false;
+  for (; n < TP_N; n++) {
+    arr[n * 3] = p.x; arr[n * 3 + 1] = p.y; arr[n * 3 + 2] = p.z;
+    if (p.y <= 0.02 && n > 0) {
+      tp.point.set(p.x, 0, p.z);
+      tp.valid = p.x > TP_BOUNDS.x0 && p.x < TP_BOUNDS.x1 && p.z > TP_BOUNDS.z0 && p.z < TP_BOUNDS.z1;
+      n++; break;
+    }
+    v.y -= 9.8 * 0.03; p.addScaledVector(v, 0.03);
+  }
+  tpGeo.setDrawRange(0, n);
+  tpGeo.attributes.position.needsUpdate = true;
+  const col = tp.valid ? 0xffd060 : 0xff5a4a;
+  tpLine.material.color.setHex(col); tpMarker.children[0].material.color.setHex(col);
+  tpLine.visible = true;
+  tpMarker.visible = tp.valid;
+  tpMarker.position.copy(tp.point); tpMarker.position.y = 0.03;
+  const yaw = Math.atan2(-game.playerFwd.x, -game.playerFwd.z);
+  tpMarker.rotation.y = yaw;
+}
+function teleportTo(point, headPos) {
+  rig.position.x += point.x - headPos.x;
+  rig.position.z += point.z - headPos.z;
+  audio.whoosh(null);
+}
+// Stand on the shooting line at the origin, facing down the range.
+function recenter() {
+  const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+  rig.rotation.set(0, -e.y, 0);
+  const off = new THREE.Vector3(camera.position.x, 0, camera.position.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), -e.y);
+  rig.position.set(-off.x, 0, -off.z);
+}
+let pendingRecenter = 0;
 
 // Snap turn around the head
 let snapReady = true;
@@ -228,9 +287,11 @@ btnVR.addEventListener('click', async () => {
     const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'layers'] });
     desk.active = false;
     camera.position.set(0, 0, 0); camera.rotation.set(0, 0, 0); camera.fov = 70; camera.updateProjectionMatrix();
+    rig.position.set(0, 0, 0); rig.rotation.set(0, 0, 0);
     await renderer.xr.setSession(session);
+    pendingRecenter = 30;
     overlay.hidden = true; deskHud.hidden = true; crosshair.hidden = true; scopeOverlay.hidden = true;
-    session.addEventListener('end', () => { overlay.hidden = false; camera.position.set(0, CFG.eyeHeightDesktop, 0); });
+    session.addEventListener('end', () => { overlay.hidden = false; rig.position.set(0, 0, 0); rig.rotation.set(0, 0, 0); camera.position.set(0, CFG.eyeHeightDesktop, 0); tpLine.visible = false; tpMarker.visible = false; });
   } catch (err) {
     vrNote.textContent = `Couldn’t start VR: ${err.message ?? err}`;
   }
@@ -280,9 +341,27 @@ function frame() {
       if (!h.present) continue;
       if (h.a) weapons.cycle(1);
       if (h.b) weapons.cycle(-1);
+      if (h.stick) recenter();
     }
-    const sx = (hands.main.present ? hands.main.axes[0] : 0) + (hands.off.present ? hands.off.axes[0] : 0);
-    if (Math.abs(sx) > CFG.stickDeadzone && snapReady) { snapTurn(Math.sign(sx), headPos); snapReady = false; }
+    if (pendingRecenter > 0 && --pendingRecenter === 0) recenter();
+    // Teleport: push a stick forward to aim the arc, let go to jump.
+    if (!tp.hand) {
+      for (const h of [hands.main, hands.off]) {
+        if (h.present && h.axes[1] < -0.7 && Math.abs(h.axes[0]) < 0.5) { tp.hand = h; break; }
+      }
+    }
+    if (tp.hand) {
+      if (!tp.hand.present) tp.hand = null;
+      else if (tp.hand.axes[1] > -0.3) {
+        if (tp.valid) teleportTo(tp.point, headPos);
+        tp.hand = null;
+      } else updateTeleportArc(tp.hand);
+    }
+    if (!tp.hand) { tpLine.visible = false; tpMarker.visible = false; }
+    // Snap turn on a sideways flick (ignored while aiming a teleport)
+    let sx = 0;
+    for (const h of [hands.main, hands.off]) if (h.present && Math.abs(h.axes[0]) > Math.abs(h.axes[1])) sx += h.axes[0];
+    if (!tp.hand && Math.abs(sx) > CFG.stickDeadzone && snapReady) { snapTurn(Math.sign(sx), headPos); snapReady = false; }
     if (Math.abs(sx) < 0.3) snapReady = true;
   } else if (desk.active) {
     deskAim = desktopHands(realDt);
@@ -312,12 +391,19 @@ function frame() {
   hud.update(realDt);
   ui.update(realDt, headPos);
 
-  // Wrist display rides on the off hand
+  // Ammo/coins readout floats beside whatever you're holding
   const wrist = hud.wrist.mesh;
-  wrist.visible = xr && hands.off.present;
+  const holder = weapons.current === 'bow' ? hands.off : hands.main;
+  wrist.visible = xr && holder.present;
   if (wrist.visible) {
-    const back = new THREE.Vector3(0, 0, 1).applyQuaternion(hands.off.gripQuat);
-    wrist.position.copy(hands.off.gripPos).addScaledVector(back, 0.16).add(new THREE.Vector3(0, 0.06, 0));
+    if (weapons.current === 'bow') {
+      // between the bow hand and your eyes, below the sight line
+      wrist.position.lerpVectors(holder.gripPos, headPos, 0.4).y -= 0.16;
+    } else {
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(holder.rayQuat);
+      const side = new THREE.Vector3(1, 0, 0).applyQuaternion(holder.rayQuat).multiplyScalar(game.settings.leftHanded ? -1 : 1);
+      wrist.position.copy(holder.rayPos).addScaledVector(up, 0.1).addScaledVector(side, 0.12);
+    }
     wrist.lookAt(headPos);
   }
   if (desk.active && !xr) updateDeskHud();

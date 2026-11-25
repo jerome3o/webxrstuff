@@ -64,10 +64,10 @@ export class Game {
     for (const [z, y, step] of [[-15, 6.2, 4], [-28, 7, 5], [-44, 7.5, 6]]) {
       for (const x of [-15, 15]) {
         const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, y + 0.2, 8), postMat);
-        post.position.set(x, (y + 0.2) / 2, z); this.scene.add(post);
+        post.position.set(x, (y + 0.2) / 2, z); this.env.root.add(post);
       }
       const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 30, 4), ropeMat);
-      rope.rotation.z = Math.PI / 2; rope.position.set(0, y, z); this.scene.add(rope);
+      rope.rotation.z = Math.PI / 2; rope.position.set(0, y, z); this.env.root.add(rope);
       for (let x = -12; x <= 12.01; x += step) this.addTarget(new HangingLantern(this, new THREE.Vector3(x, y, z), rand(0.6, 1.3)));
     }
     this.gong = this.addTarget(new Gong(this, new THREE.Vector3(3.8, 0, -13)));
@@ -191,7 +191,12 @@ export class Game {
     if (id === 'sniper' && this.has('bandolier')) return base + 5;
     return base;
   }
-  spendAmmo(id) { if (this.ammo[id] !== Infinity) this.ammo[id] = Math.max(0, this.ammo[id] - 1); this.emit(); this.persist(); }
+  spendAmmo(id) {
+    if (this.ammo[id] !== Infinity) this.ammo[id] = Math.max(0, this.ammo[id] - 1);
+    const left = this.ammo[id];
+    if (left === 3 || left === 1) { this._hintCool = 0; this.hint(`${CFG.weapons[id].cn} 还剩 ${left}`, `${left} left · hand cannon + glowing crates = more ammo`); }
+    this.emit(); this.persist();
+  }
   giveAmmo(id, n) {
     const before = this.ammo[id];
     this.ammo[id] = Math.min(this.ammoMax(id), before + n);
@@ -200,7 +205,8 @@ export class Game {
   }
   toastAmmo(id) {
     const W = CFG.weapons[id];
-    this.hint(`${W.cn} 没弹药了`, `Out of ammo · shoot supply crates with the hand cannon`);
+    this._hintCool = 0;
+    this.hint(`${W.cn} 没弹药了`, `${W.en} empty · switched to 手铳 · shoot the glowing crates`);
   }
   has(id) { return this.owned.has(id); }
   buy(item) {

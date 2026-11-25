@@ -157,7 +157,9 @@ export class Bow {
         b.copy(a).addScaledVector(d, 0.022 / l);
       }
       if (!isFinite(s.pts[5].x)) for (const p of s.pts) p.copy(root);
-      s.geo.setFromPoints(s.pts);
+      const pa = s.geo.attributes.position;
+      for (let i = 0; i < s.pts.length; i++) pa.setXYZ(i, s.pts[i].x, s.pts[i].y, s.pts[i].z);
+      pa.needsUpdate = true;
     }
   }
   setVisible(v) { this.group.visible = v; for (const s of this.tassel.strands) s.line.visible = v; }
@@ -392,7 +394,7 @@ export class WeaponSystem {
       aim = _v2.subVectors(off.gripPos, head.pos); aim.y *= 0.3;
       if (opts.desktop) aim.copy(opts.desktopAim);
       aim.addScaledVector(fist, -aim.dot(fist)).normalize();
-      this.bowAim.lerp(aim, 1 - Math.exp(-12 * dt)).normalize();
+      this.bowAim.lerp(aim, 1 - Math.exp(-40 * dt)).normalize();
       aim = this.bowAim;
       if (bow.draw > 0) bow.setDraw(damp(bow.draw, 0, 30, dt) < 0.002 ? 0 : damp(bow.draw, 0, 30, dt));
     }
@@ -418,7 +420,7 @@ export class WeaponSystem {
         this.nockHighlight.material.opacity = 0.35 + Math.sin(performance.now() / 120) * 0.15;
       }
       if (pressed && (near || opts.desktop) && !opts.uiHover) {
-        if (this.game.ammo.bow <= 0) { audio.dryFire(); this.game.toastAmmo('bow'); main.haptic(0.3, 30); return; }
+        if (this.game.ammo.bow <= 0) { audio.dryFire(); this.game.toastAmmo('bow'); main.haptic(0.3, 30); this.select('pistol'); return; }
         bow.nock(this.game.has('fireTips'));
         this.bowState = 'drawing';
         this.lastHapticDraw = 0;
@@ -465,7 +467,7 @@ export class WeaponSystem {
     if (id === 'sniper') {
       const S = CFG.weapons.sniper;
       if (main.triggerDown && !opts.uiHover && this.cooldown <= 0) {
-        if (this.game.ammo.sniper <= 0) { audio.dryFire(); this.game.toastAmmo('sniper'); }
+        if (this.game.ammo.sniper <= 0) { audio.dryFire(); this.game.toastAmmo('sniper'); this.select('pistol'); }
         else { this.charging = true; this.charge = 0; this.chargeReadyPlayed = false; }
       }
       if (this.charging) {
@@ -501,7 +503,7 @@ export class WeaponSystem {
         main.haptic(0.7, 50);
         this.cooldown = W.cooldown;
       } else if (id === 'rocket') {
-        if (this.game.ammo.rocket <= 0) { audio.dryFire(); this.game.toastAmmo('rocket'); return; }
+        if (this.game.ammo.rocket <= 0) { audio.dryFire(); this.game.toastAmmo('rocket'); this.select('pistol'); return; }
         this.game.spendAmmo('rocket');
         this.game.spawnProjectile(new Projectile('rocket', { pos: muzzle, vel: dir.clone().multiplyScalar(W.launchSpeed) }));
         this.game.fx.muzzle(muzzle, dir, true);

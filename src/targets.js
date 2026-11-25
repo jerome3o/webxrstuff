@@ -517,6 +517,13 @@ export class SupplyCrate extends Target {
     const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.45, 4), new THREE.MeshLambertMaterial({ color: 0x3a2a1a })); rope.position.y = 0.5; this.group.add(rope);
     this.addCollider(this.box, 'box', { half: new THREE.Vector3(0.32, 0.32, 0.32) }, 'wood');
     this.addCollider(balloon, 'sphere', { r: 0.3 }, 'paper', { tag: 'balloon' });
+    // Loot beam so crates are easy to spot from the shooting line
+    const beamColor = { bow: 0xff5040, rocket: 0xffa020, sniper: 0x60a0ff }[ammoType];
+    this.beam = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.3, 14, 10, 1, true),
+      new THREE.MeshBasicMaterial({ color: beamColor, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    this.beam.position.y = 7.5; this.group.add(this.beam);
+    this.halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.03, 6, 24), new THREE.MeshBasicMaterial({ color: beamColor, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.halo.rotation.x = Math.PI / 2; this.group.add(this.halo);
     this.phase = rand(0, 6);
     this.group.scale.setScalar(0.01);
   }
@@ -525,6 +532,9 @@ export class SupplyCrate extends Target {
     this.group.position.y = this.base.y + Math.sin(t * 0.9 + this.phase) * 0.35;
     this.group.position.x = this.base.x + Math.sin(t * 0.3 + this.phase) * 1.2;
     this.box.rotation.y += dt * 0.4;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 4 + this.phase);
+    this.beam.material.opacity = 0.12 + 0.14 * pulse;
+    this.halo.scale.setScalar(0.9 + 0.25 * pulse);
   }
   onHit(hit, proj) {
     if (!proj || proj.kind !== 'pistol') {

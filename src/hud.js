@@ -104,29 +104,60 @@ export function buildHUD(scene, ui, game, weapons) {
   });
   mount(shop, new THREE.Vector3(2.9, 1.55, -1.9), 1.7, 1.55);
 
-  // ── Wrist display (VR) ─────────────────────────────────────
+  // ── Weapon readout (VR): floats beside whatever you're holding ──
   const wrist = new Panel(ui, {
-    width: 0.17, height: 0.085, px: 512,
+    width: 0.2, height: 0.115, px: 512,
     draw: (c, W, H) => {
-      roundRect(c, 0, 0, W, H, 24); c.fillStyle = 'rgba(28,20,17,0.92)'; c.fill();
+      roundRect(c, 0, 0, W, H, 24); c.fillStyle = 'rgba(28,20,17,0.9)'; c.fill();
       c.lineWidth = 4; c.strokeStyle = PAL.gold; c.stroke();
       const id = weapons.current, Wp = CFG.weapons[id];
+      const empty = game.ammo[id] === 0, low = game.ammo[id] <= 3;
       c.textBaseline = 'middle'; c.textAlign = 'left';
-      c.fillStyle = PAL.gold; c.font = `86px ${FONT_BRUSH}`; c.fillText(Wp.cn, 26, 100);
-      c.fillStyle = PAL.paper; c.font = `72px ${FONT_SERIF}`; c.textAlign = 'right'; c.fillText(ammoText(game, id), W - 24, 96);
-      c.textAlign = 'left'; c.fillStyle = PAL.dim; c.font = `30px ${FONT_LATIN}`;
-      c.fillText(`${Wp.en}`, 28, 186);
-      c.textAlign = 'right'; c.fillStyle = '#ffd56a'; c.fillText(`${game.coins} coins`, W - 24, 186);
+      c.fillStyle = PAL.gold; c.font = `80px ${FONT_BRUSH}`; c.fillText(Wp.cn, 24, 74);
+      c.fillStyle = empty ? '#ff6a4a' : low ? '#ffb070' : PAL.paper; c.font = `84px ${FONT_SERIF}`; c.textAlign = 'right';
+      c.fillText(game.ammo[id] === Infinity ? '∞' : `${game.ammo[id]}`, W - 24, 78);
+      c.textAlign = 'left'; c.fillStyle = '#ffd56a'; c.font = `44px ${FONT_SERIF}`; c.fillText(`铜钱 ${game.coins}`, 24, 168);
+      c.textAlign = 'right'; c.fillStyle = PAL.dim; c.font = `30px ${FONT_LATIN}`; c.fillText(`${game.score} pts`, W - 24, 170);
+      c.textAlign = 'center'; c.font = `28px ${FONT_LATIN}`;
+      if (id === 'pistol') { c.fillStyle = '#9cf0a0'; c.fillText('Shoot glowing crates for ammo', W / 2, 238); }
+      else if (low) { c.fillStyle = '#ffb070'; c.fillText('Low · use 手铳 on glowing crates', W / 2, 238); }
+      else { c.fillStyle = PAL.dim; c.fillText('A/X next weapon · B/Y previous', W / 2, 238); }
     },
   });
   wrist.mesh.renderOrder = 50;
+  wrist.mesh.material.depthTest = false;
   scene.add(wrist.mesh);
+
+  // ── Placard on the rail: how the economy works ────────────
+  const placard = new Panel(ui, {
+    width: 0.9, height: 0.5, px: 1024,
+    draw: (c, W, H) => {
+      drawBoard(c, W, H, null);
+      c.textBaseline = 'middle'; c.textAlign = 'left';
+      const row = (y, cn, text) => {
+        c.fillStyle = PAL.gold; c.font = `58px ${FONT_BRUSH}`; c.fillText(cn, 60, y);
+        c.fillStyle = PAL.paper; fitText(c, text, 250, y + 4, W - 300, 34, FONT_LATIN, 'left');
+      };
+      row(110, '弹药', 'Ammo: shoot the glowing floating crates with the 手铳 hand cannon');
+      row(215, '手铳', 'The hand cannon never runs out. Weapons switch to it when empty');
+      row(320, '铜钱', 'Coins: hit anything. Spend them at the armoury board on the right');
+      row(425, '传送', 'Push a thumbstick forward to teleport · click it to return here');
+    },
+  });
+  { const g = new THREE.Group(); g.position.set(0, 0.98, -2.45); g.add(placard.mesh); g.rotation.x = -0.75; scene.add(g); }
 
   // Refresh on change; scoreboard also ticks for the timer and wind.
   game.onChange(() => { score.markDirty(); shop.markDirty(); wrist.markDirty(); });
-  let acc = 0;
+  // Only re-upload the scoreboard texture when what it shows actually changed.
+  let acc = 0, sig = '', lastWeapon = null;
   return {
-    score, shop, wrist,
-    update(dt) { acc += dt; if (acc > 0.25) { acc = 0; score.markDirty(); } },
+    score, shop, wrist, placard,
+    update(dt) {
+      if (weapons.current !== lastWeapon) { lastWeapon = weapons.current; wrist.markDirty(); }
+      acc += dt; if (acc < 0.2) return; acc = 0;
+      const w = game.wind;
+      const s = [game.roundActive, Math.ceil(game.roundTime), windName(w)[0], w.length().toFixed(1), Math.round(Math.atan2(w.x, -w.z) * 8)].join('|');
+      if (s !== sig) { sig = s; score.markDirty(); }
+    },
   };
 }

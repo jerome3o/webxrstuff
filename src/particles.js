@@ -106,12 +106,15 @@ export class ParticleSystem {
       this.alpha[i] = 1;
       this.size[i] = this.s0[i];
     }
+    this._dirty = true;
   }
 
   update(dt) {
     const P = this.pos, V = this.vel;
+    let alive = 0;
     for (let i = 0; i < this.cap; i++) {
-      if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; } continue; }
+      if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; alive++; } continue; }
+      alive++;
       this.life[i] -= dt;
       const t = 1 - this.life[i] / this.maxLife[i];
       const d = Math.exp(-this.drag[i] * dt);
@@ -122,6 +125,9 @@ export class ParticleSystem {
       if (this.flicker[i]) a *= 0.5 + 0.5 * Math.random();
       this.alpha[i] = Math.max(0, a);
     }
+    // Nothing alive (and nothing just died): no need to re-upload buffers this frame.
+    if (alive === 0 && !this._dirty) return;
+    this._dirty = alive > 0;
     this.aPos.needsUpdate = true; this.aCol.needsUpdate = true; this.aSize.needsUpdate = true; this.aAlpha.needsUpdate = true;
   }
 }

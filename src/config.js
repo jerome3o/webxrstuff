@@ -59,7 +59,7 @@ export const CFG = {
 
   // ── Perf ──────────────────────────────────────────────────
   maxStuckProjectiles: 40,
-  particleCapacity: 5000,
+  particleCapacity: 3000,
   scopeResolution: 512,
 };
 

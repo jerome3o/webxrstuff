@@ -39,7 +39,7 @@ Hits build a combo (×1.5 every 5 hits, up to ×4). A miss breaks it. Points ear
 
 ## Controls
 
-**VR:** bow in the off hand, main hand draws. Guns go in the main hand. A/X next weapon, B/Y previous, thumbstick snap-turns. Point at a board and pull the trigger to click. Handedness switch is on the armoury board.
+**VR:** bow in the off hand, main hand draws. Guns go in the main hand. A/X next weapon, B/Y previous. Thumbstick forward aims a teleport arc (release to jump), sideways snap-turns, click returns you to the shooting line facing the range. Your ammo and coins float beside the weapon you're holding. Point at a board and pull the trigger to click. Handedness switch is on the armoury board.
 
 **Desktop:** mouse aims (click to lock the pointer), hold left to draw or charge, right button zooms the rifle, 1–4 or Q/E switch weapons, WASD moves, G rings the gong, M toggles music.
 
