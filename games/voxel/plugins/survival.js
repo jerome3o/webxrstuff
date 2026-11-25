@@ -48,6 +48,14 @@ export default async function install(game, ctx) {
     get state() { return { hp: vitals.hp, hunger: vitals.hunger, sat: vitals.sat, breath: vitals.breath, dead: vitals.dead, bed: vitals.bed, spawn: vitals.spawn, pouches: vitals.pouches.length, creatures: creatures.list.length }; },
   };
 
+  // recipes for survival gear, through the crafting plugin's API when it is installed
+  if (game.crafting?.addRecipe) {
+    const add = (r) => { try { game.crafting.addRecipe(r); } catch (e) { console.warn('[voxel/survival] recipe failed', e); } };
+    add({ st: 'hand', cat: 'misc', out: ['sling', 1], in: [['twig', 2], ['fiber', 3]] });
+    add({ st: 'bench', cat: 'misc', out: ['bedroll', 1], in: [['moss_hide', 1], ['felt_cream', 2]] });
+    add({ st: 'bench', cat: 'tools', out: ['wyrmfang_blade', 1], in: [['wyrm_scale', 4], ['moonsilver_ingot', 1], ['twig', 1]] });
+  }
+
   // ── events ───────────────────────────────────────────────
   const offs = [];
   const on = (n, f) => offs.push(game.events.on(n, f));
@@ -69,7 +77,7 @@ export default async function install(game, ctx) {
       game.audio.material('cloth', 'place', new THREE.Vector3(x, y, z));
       game.toast('Bedroll laid: you will wake here. Grip it at night to sleep', 3);
       if (game.sky.time > 0.78 || game.sky.time < 0.2) vitals.trySleep();
-    } else if (ITEMS[st.id]?.food) e.handled = true;
+    }
   });
   // foraging: tufts sometimes hide dewberries, blossoms drop plums
   on('blockBroken', (e) => {
@@ -94,10 +102,7 @@ export default async function install(game, ctx) {
     const p = game.player;
     vitals.spawn = { x: p.position.x, y: p.feetY, z: p.position.z };
     if (s) { vitals.load(s); for (const k of s.seen ?? []) seen.add(k); }
-    else if (game.mode === 'survival') {
-      // first survival session in this world: a few things to get going
-      game.inventory.add(I.sling, 1); game.inventory.add(I.bedroll, 1); game.inventory.add(I.dewberry, 4);
-    }
+
   });
 
   on('tick', (e) => {

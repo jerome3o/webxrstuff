@@ -177,10 +177,11 @@ export class GameUI {
     c.fillStyle = COL.gold; c.font = `800 44px ${FONTS.sans}`; c.textAlign = 'left'; c.textBaseline = 'middle';
     c.fillText('Blockfell', 34, 52);
     let x = 270;
+    const tabW = Math.min(170, Math.floor((W - 100 - 270) / Math.max(1, this.tabs.length)) - 10); // keep the × clear
     for (const t of this.tabs) {
       const label = typeof t.label === 'function' ? t.label() : t.label;
-      p.button('tab:' + t.id, x, 24, 170, 56, label, () => { this.open(t.id); }, { ...BTN, active: this.activeTab === t.id });
-      x += 180;
+      p.button('tab:' + t.id, x, 24, tabW, 56, label, () => { this.open(t.id); }, { ...BTN, active: this.activeTab === t.id });
+      x += tabW + 10;
     }
     p.button('close', W - 90, 24, 60, 56, '×', () => this.close(), { ...BTN, size: 40 });
     c.fillStyle = '#3d3458'; c.fillRect(30, 92, W - 60, 2);

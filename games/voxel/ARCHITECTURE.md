@@ -209,3 +209,52 @@ RMB) a bench, kiln or chest to open it; tap pack items to load a kiln / move int
 station slot to take back. Grip a door to open/close it. Ladders: walk into one and push forward (or
 hold jump) to climb, back to descend; in VR grab the ladder with either grip and pull yourself up.
 Tiller: grip on turf/loam. Seeds/earthroot: grip on tilled loam.
+
+## Survival plugin (phase 2)
+
+`plugins/survival.js` wires `plugins/survival/*`: `items.js` (drops, foods, sling, bedroll, sprites;
+**item ids 420–449**), `models.js` (low-poly vertex-coloured creature parts), `creatures.js` (kinds,
+spawning, AI, instanced rendering), `vitals.js` (health/hunger/breath, HUD, overlay, death pouch,
+bedroll, sleep, eating), `combat.js` (melee, sling stones), `fx.js` (pooled particles, 1 draw call),
+`sfx.js` (synth voices). The only phase-1 edit is `ui.js`: tab widths shrink to fit so the × stays clear.
+
+**State.** `game.survival = { vitals, creatures, combat, fx, sfx, KINDS, spawn(kind, x?, y?, z?, opts?),
+setTime, damage(n, cause), heal, feed, kill(cause), respawn(), clearCreatures(), setSpawning(bool), state }`.
+Vitals: 20 hp, 20 hunger + saturation (exhaustion from time/walking/sprinting/fighting), regen at
+hunger ≥ 15, starvation at 0, 10 s breath underwater then 2 hp/s. Consumes `playerDamaged` and sets
+`e.applied` (creatures use it for knockback); creature hits have 0.5 s i-frames. Creative: no damage
+or hunger. Setting `peaceful` (Vitals tab): no hostiles, slow regen, no hunger drain.
+
+**Food.** Any item with `food: { hunger, saturation, heal?, always? }`. Desktop: hold RMB with it selected
+(not when a plantable food targets tilled loam). VR: hold it to your mouth ~1 s. Raw meats carry
+`smelt` → roast versions (kiln).
+
+**Creatures** (`KINDS` in `creatures.js`): mossback (passive grazer, plains/forest), hornbloom (neutral,
+charges when provoked, forest/snow), sky kite (day glider), lantern moth (night flier), glimmerfin
+(fish), ink shade (night/cave hostile; emerges from the ground, dissolves in sunlight), cragcrab (cave
+hostile, armoured), deep wyrm (rare boss in deep caves, y < 28; burrows through stone, drops Wyrmheart
+Ember + scales). One InstancedMesh per kind × body part, hidden when unused; parts animated by code.
+AI thinks on a staggered 0.25–0.4 s timer: wander/graze/idle, flee, chase with step-up / cliff / water
+probes, windup (telegraph: pose + sound) → strike → recover. Caps ~8 passive, 7 air, 8 fish, hostile
+cap ramps with night depth and day count (2..5), 1 boss; despawn beyond ~64 m. Spawning runs every
+0.35 s around the player using `WorldGen.column` biomes and `world.getLight`.
+
+**Combat.** VR: swing the held item into a creature (grip speed > 2 m/s, damage scaled by speed), or
+pull the trigger with the laser on one within 3.2 m. Desktop: LMB on a creature. Damage from
+`weapon.damage`, top-level `damage`, else by tool type/tier. While a creature (or bedroll/pouch) is
+aimed, `blockBreak`/`blockPlace` are cancelled. Sling: hold grip/RMB to draw, release to loose a
+stone (uses Slate Rubble or Shingle).
+
+**Death / respawn.** Inventory goes into a pouch (with a light beam) at the death spot; walk into it
+or strike it to recover. Trigger / click / Space wakes you at the bedroll (if its ground is intact)
+or the world spawn. Bedroll: grip it on flat ground (sets the wake point; at night also sleeps),
+grip it at night to sleep (fade, skip to dawn, clears hostiles), strike it to roll it up.
+
+**Recipes** added through `game.crafting.addRecipe`: sling (hand: 2 twig + 3 fiber), bedroll (bench:
+moss hide + 2 oat felt), Wyrmfang Blade (bench: 4 wyrm scales + moonsilver ingot + twig).
+
+**Events emitted.** `creatureSpawned { creature }`, `creatureKilled { kind, name, pos, by }`,
+`playerAte { id, food }`, `playerDied { cause, pos }`, `playerRespawned { pos, bed }`, `playerSlept { day }`.
+
+**Saves.** `data.survival = { hp, hunger, sat, exh, spawn, bed, pouches: [{ x, y, z, slots }], seen }`.
+Creatures are not persisted.

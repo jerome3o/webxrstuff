@@ -109,6 +109,11 @@ const SPRITES = {
     p.clear(); blob(p, 8, 8.5, 6, 4.5, '#d9a066', '#b5713f', '#8a4f2c');
     line(p, 4, 7, 11, 11, '#f2d3a6'); glowDots(p, [[6, 6]], '#f6d6aa'); outline(p);
   },
+  wyrmfang_blade(p) {
+    p.clear(); line(p, 2, 14, 5, 11, '#7a5638'); line(p, 3, 14, 5, 12, '#9a7350'); line(p, 3, 10, 6, 13, '#ffb38a');
+    for (let i = 0; i < 9; i++) { p.set(6 + i, 10 - i, '#9fb1d6'); p.set(5 + i, 10 - i, '#c9d6f5'); p.set(6 + i, 9 - i, '#6f82ad'); }
+    p.set(14, 1, '#e4ecff'); outline(p);
+  },
   sling(p) {
     p.clear(); line(p, 4, 14, 7, 9, '#9a7350'); line(p, 7, 9, 5, 3, '#9a7350'); line(p, 7, 9, 11, 4, '#9a7350');
     line(p, 5, 3, 8, 6, '#e6a6b8'); line(p, 11, 4, 8, 6, '#e6a6b8'); p.set(8, 6, '#c47e93'); p.set(8, 7, '#c47e93'); outline(p);
@@ -137,6 +142,7 @@ const DEFS = [
   [432, 'plumfruit', 'Blossom Plum', { food: { hunger: 4, saturation: 2.4 } }],
   [433, 'sling', 'Twine Sling', { kind: 'weapon', stack: 1, weapon: { damage: 1, ranged: true, ammo: ['rubble', 'shingle'] } }],
   [434, 'bedroll', 'Bedroll', { kind: 'bedroll', stack: 1 }],
+  [438, 'wyrmfang_blade', 'Wyrmfang Blade', { kind: 'tool', stack: 1, damage: 11, tool: { type: 'blade', tier: 4, speed: 8, durability: 1200 } }],
   [435, 'roast_haunch', 'Roast Haunch', { food: { hunger: 8, saturation: 12 } }],
   [436, 'seared_glimmerfin', 'Seared Glimmerfin', { food: { hunger: 5, saturation: 6 } }],
   [437, 'roast_flank', 'Roast Hornbloom Flank', { food: { hunger: 8, saturation: 12.8 } }],

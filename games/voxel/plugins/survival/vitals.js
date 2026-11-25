@@ -229,7 +229,11 @@ export class Vitals {
     let want = false;
     if (food && !g.ui.modalOpen) {
       const hungry = this.hunger < MAX_FOOD || food.always || (food.heal && this.hp < MAX_HP);
-      if (input.desktop) want = input.main.squeeze > 0.5;
+      if (input.desktop) {
+        // seeds that are also food (earthroot): RMB on tilled soil plants instead of eating
+        const t = g.interact?.target;
+        want = input.main.squeeze > 0.5 && !(ITEMS[stack.id]?.plant && t && BLOCKS[t.id]?.key === 'tilled_loam');
+      }
       else {
         const h = input.head;
         _v.copy(h.pos).addScaledVector(h.up, -0.08).addScaledVector(h.fwd, 0.04);
