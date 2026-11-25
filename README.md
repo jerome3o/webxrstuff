@@ -1,4 +1,31 @@
-# 百步穿杨 · Bǎi Bù Chuān Yáng
+# 游乐场 · VR Playground
+
+A WebXR hub of twelve games for the Steam Frame (and any WebXR headset), with a desktop mode for testing.
+Open the page, press **Enter VR**, point at a game card and pull the trigger. In any game, **hold Y on the left
+controller** (desktop: Tab) to come back to the hub.
+
+| | Game | Folder | Shows off |
+|---|---|---|---|
+| 射 | 百步穿杨 Hundred Paces | `games/archery` | Two-handed bow, rocket, scoped rifle, hand cannon |
+| 土 | Blockfell | `games/voxel` | Voxel world: mining, building, crafting, creatures, survival |
+| 刀 | Lantern Rush | `games/rhythm` | Swing-tracked slicing to generated music |
+| 乒 | Paddle Duel | `games/pingpong` | Table tennis physics with spin vs AI |
+| 鼓 | Thunder Drums | `games/drums` | Velocity-sensitive spatial percussion |
+| 山 | Cliffside | `games/climb` | Hand-over-hand climbing |
+| 飞 | Crane Flight | `games/flight` | Arm-driven flight |
+| 萤 | Firefly Garden | `games/fireflies` | Hand tracking and pinch gestures |
+| 投 | Night Market Toss | `games/toss` | Grab and throw physics |
+| 城 | Tabletop Siege | `games/siege` | Diorama tower defence you can grab and scale |
+| 拳 | Dodge Dojo | `games/dodge` | Full-body ducking, leaning, punching |
+| 画 | Ink in the Air | `games/paint` | 3D painting |
+
+The platform (`src/platform/`) owns the renderer, WebXR session, input (with desktop emulation), audio and the hub.
+Adding a game: see `GAMES.md` and `games/_template/`, then add an entry to `games/registry.js`.
+Blockfell's internals are documented in `games/voxel/ARCHITECTURE.md`.
+
+---
+
+## Game 1: 百步穿杨 (archery) in detail
 
 A WebXR archery range at dusk, built for the Steam Frame (and any WebXR headset), with a desktop mode for quick testing.
 
@@ -10,7 +37,7 @@ WebXR needs HTTPS. The easiest route is GitHub Pages (workflow included):
 
 1. Repo **Settings → Pages → Source: GitHub Actions**.
 2. Push to `main`. The page lands at `https://<user>.github.io/webxrstuff/`.
-3. Open that URL in the headset browser and press **进入 Enter VR**.
+3. Open that URL in the headset browser and press **进入 Enter VR**, then pick 百步穿杨 in the hub.
 
 Local testing on desktop: `python3 -m http.server 8000` and open `http://localhost:8000`.
 
@@ -49,16 +76,16 @@ No build step. ES modules plus a vendored Three.js r170.
 
 | File | What it does |
 |---|---|
-| `src/config.js` | Every tuning number: weapon speeds, drag, charge time, ammo, scoring, shop. Start here. |
-| `src/physics.js` | Swept-segment collision (sphere, box, disk) in object-local space, plus raycast against static meshes. No tunnelling at rifle speeds. |
-| `src/projectiles.js` | Arrow, rocket and bullet flight: gravity, quadratic drag, wind, rocket thrust; sticking and wobble. |
-| `src/weapons.js` | Bow model and draw mechanics, gun models, scope render-to-texture, firing and haptics. |
-| `src/targets.js` | All target types and how they respond to hits and blasts. |
-| `src/game.js` | Scoring, combos, ammo economy, coins and shop, rounds, wind, spawner, saving. |
-| `src/environment.js` | Sky, shan-shui mountains, walls, gate, pagodas, pond and koi, plum tree, bamboo, willow, banners, cranes. |
-| `src/audio.js` | All sound is synthesised: weapons, impacts by material, gong, firecrackers, and generative guzheng-style music in D pentatonic. |
-| `src/particles.js` | Pooled GPU point particles for sparks, smoke, paper, porcelain shards, explosions, fireworks. |
-| `src/ui.js`, `src/hud.js` | Canvas-texture boards with laser pointing, floating score popups, wrist display. |
-| `src/main.js` | Renderer, XR session, controller input, desktop fallback, frame loop. |
+| `games/archery/config.js` | Every tuning number: weapon speeds, drag, charge time, ammo, scoring, shop. Start here. |
+| `games/archery/physics.js` | Swept-segment collision (sphere, box, disk) in object-local space, plus raycast against static meshes. No tunnelling at rifle speeds. |
+| `games/archery/projectiles.js` | Arrow, rocket and bullet flight: gravity, quadratic drag, wind, rocket thrust; sticking and wobble. |
+| `games/archery/weapons.js` | Bow model and draw mechanics, gun models, scope render-to-texture, firing and haptics. |
+| `games/archery/targets.js` | All target types and how they respond to hits and blasts. |
+| `games/archery/game.js` | Scoring, combos, ammo economy, coins and shop, rounds, wind, spawner, saving. |
+| `games/archery/environment.js` | Sky, shan-shui mountains, walls, gate, pagodas, pond and koi, plum tree, bamboo, willow, banners, cranes. |
+| `games/archery/audio.js` | All sound is synthesised: weapons, impacts by material, gong, firecrackers, and generative guzheng-style music in D pentatonic. |
+| `games/archery/particles.js` | Pooled GPU point particles for sparks, smoke, paper, porcelain shards, explosions, fireworks. |
+| `games/archery/ui.js`, `src/hud.js` | Canvas-texture boards with laser pointing, floating score popups, wrist display. |
+| `index.js` | Game entry for the platform: input mapping, desktop posing, teleport, frame update. |
 
 `window.__game` exposes the game objects in the console for poking at things.
