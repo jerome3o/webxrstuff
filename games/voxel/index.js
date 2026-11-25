@@ -13,6 +13,7 @@ import { GameAudio } from './audio.js';
 import { ItemDrop } from './drops.js';
 import { ItemModels } from './models.js';
 import { Events } from './events.js';
+import { PLUGINS } from './plugins.js';
 
 // Blockfell: voxel mine-and-build sandbox. Entry point; wires the modules into one `game` object
 // that is also the extension surface for later modules (see ARCHITECTURE.md).
@@ -122,6 +123,12 @@ export async function create(ctx) {
     while (y < HEIGHT - 2 && !pl._boxFree(sp.x - 0.3, y, sp.z - 0.3, sp.x + 0.3, y + 1.8, sp.z + 0.3)) y++;
     pl.feetY = y; rig.position.y = y;
   }
+  // Phase-2 plugins (plugins/*.js): installed before 'load' so they can restore their save data.
+  const plugins = [];
+  for (const install of PLUGINS) {
+    try { const p = await install(game, ctx); if (p) plugins.push(p); }
+    catch (e) { console.error('[voxel] plugin failed to install', e); }
+  }
   game.events.emit('load', { data: saved ?? {} });
   if (!saved) game.toast('Welcome to Blockfell', 3);
 
@@ -212,6 +219,7 @@ export async function create(ctx) {
       try { save(); } catch (e) { console.error('[voxel] save failed', e); }
       if (game._nextSeed != null) ctx.save('voxel:meta', { seed: game._nextSeed, settings });
       game.events.emit('dispose', {});
+      for (const p of plugins) { try { p.dispose?.(); } catch (e) { console.error('[voxel] plugin dispose failed', e); } }
       for (const e of game.entities) e.dispose?.();
       game.entities.length = 0;
       game.world.dispose();
