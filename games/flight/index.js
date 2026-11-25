@@ -195,8 +195,8 @@ export async function create(ctx) {
       p.button('exit', W - 140, y, 90, 76, 'Exit', () => ctx.exit(), { size: 28 });
     },
   });
-  panel.mesh.position.set(PERCH.x - 0.85, perchY + 1.3, PERCH.z - 1.45);
-  panel.mesh.rotation.y = 0.5;
+  panel.mesh.position.set(PERCH.x - 1.15, perchY + 1.3, PERCH.z - 1.25);
+  panel.mesh.rotation.y = 0.75;
   scene.add(panel.mesh);
   pointer.panels.push(panel);
 

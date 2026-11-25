@@ -356,7 +356,7 @@ function buildPerch(topY) {
   const parts = [];
   // deck and rock collar; the player stands at the front, the pavilion sits behind
   parts.push(colorGeo(new THREE.CylinderGeometry(5.5, 5.8, 0.6, 18).translate(0, -0.3, 1.5), 0.45, 0.32, 0.22));
-  parts.push(colorGeo(new THREE.CylinderGeometry(6.4, 4.0, 9, 14).translate(0, -5, 1.5), 0.55, 0.56, 0.5));
+  parts.push(colorGeo(new THREE.CylinderGeometry(6.2, 9.5, 34, 12, 3).translate(0, -17.6, 1.5), 0.55, 0.56, 0.5));
   const pz = 4.2;
   for (const [x, z] of [[-2.2, -1.6], [2.2, -1.6], [-2.2, 1.6], [2.2, 1.6]]) parts.push(colorGeo(new THREE.CylinderGeometry(0.14, 0.16, 3, 8).translate(x, 1.5, z + pz), 0.66, 0.12, 0.1));
   parts.push(colorGeo(new THREE.ConeGeometry(4.0, 1.6, 4).rotateY(Math.PI / 4).translate(0, 3.7, pz), 0.22, 0.24, 0.28));

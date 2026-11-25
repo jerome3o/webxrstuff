@@ -445,7 +445,7 @@ export function buildLife(world) {
   const NC = 5;
   const clouds = new THREE.InstancedMesh(cgeo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.88, emissive: 0x444444 }), NC);
   const cl = [];
-  for (let i = 0; i < NC; i++) cl.push({ x: (rand() * 2 - 1) * (BX - 2), z: (rand() * 2 - 1) * (BZ - 2), y: 4.2 + rand() * 1.2, s: 0.8 + rand() * 0.7, v: 0.12 + rand() * 0.1 });
+  for (let i = 0; i < NC; i++) cl.push({ x: (rand() * 2 - 1) * (BX - 4), z: (rand() * 2 - 1) * (BZ - 3), y: 4.2 + rand() * 1.2, s: 0.8 + rand() * 0.7, v: 0.12 + rand() * 0.1 });
 
   const group = new THREE.Group();
   group.add(villagers, boats, clouds);
@@ -477,8 +477,8 @@ export function buildLife(world) {
       boats.instanceMatrix.needsUpdate = true;
       for (let i = 0; i < NC; i++) {
         const c = cl[i];
-        c.x += c.v * dt; if (c.x > BX - 1.5) c.x = -BX + 1.5;
-        const fade = Math.min(1, (BX - 1.5 - Math.abs(c.x)) / 2);
+        c.x += c.v * dt; if (c.x > BX - 3) c.x = -BX + 3;
+        const fade = Math.min(1, (BX - 3 - Math.abs(c.x)) / 2);
         P.set(c.x, c.y, c.z); Q.identity(); S.setScalar(c.s * Math.max(0.01, fade));
         M.compose(P, Q, S); clouds.setMatrixAt(i, M);
       }

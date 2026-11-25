@@ -141,7 +141,7 @@ function peakHeight(p, x, z) {
     const inner = (PERCH.r) / re;
     if (t < inner) return p.h;
     const u = (t - inner) / (1 - inner);
-    return p.h * Math.pow(1 - Math.pow(u, 3.5), 0.45);
+    return p.h * Math.pow(1 - Math.sqrt(u), 0.8);
   }
   const t3 = t * t * t;
   return p.h * (0.86 * Math.pow(1 - t3, 0.6) + 0.14 * (1 - t)) * (1 + 0.06 * vnoise(x / 23, z / 23, 9));

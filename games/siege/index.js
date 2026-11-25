@@ -806,15 +806,17 @@ export async function create(ctx) {
     rayD.copy(dir).transformDirection(invRoot);
   }
   // March the local ray against the terrain heightfield (water counts as a surface).
+  let _t0 = 0, _t1 = 0;
+  function slab(oa, da, mn, mx) {
+    if (Math.abs(da) < 1e-9) return oa >= mn && oa <= mx;
+    let a = (mn - oa) / da, b = (mx - oa) / da; if (a > b) { const tmp = a; a = b; b = tmp; }
+    _t0 = Math.max(_t0, a); _t1 = Math.min(_t1, b); return _t0 <= _t1;
+  }
   function marchTerrain(out) {
-    let t0 = 0, t1 = 1e4;
+    _t0 = 0; _t1 = 1e4;
     const o = rayO, d = rayD;
-    const slab = (oa, da, mn, mx) => {
-      if (Math.abs(da) < 1e-9) return oa >= mn && oa <= mx;
-      let a = (mn - oa) / da, b = (mx - oa) / da; if (a > b) { const tmp = a; a = b; b = tmp; }
-      t0 = Math.max(t0, a); t1 = Math.min(t1, b); return t0 <= t1;
-    };
     if (!slab(o.x, d.x, -BX, BX) || !slab(o.z, d.z, -BZ, BZ) || !slab(o.y, d.y, -1, 7)) return false;
+    const t0 = _t0, t1 = _t1;
     const step = 0.12;
     let prev = t0;
     for (let t = t0; t <= t1; t += step) {

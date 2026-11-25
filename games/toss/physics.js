@@ -228,7 +228,7 @@ function sdfWorld(b, x, y, z) {
 export function sdf(b, p, outNormal) { const d = sdfWorld(b, p.x, p.y, p.z); if (outNormal) outNormal.set(N.x, N.y, N.z); return d; }
 
 // ── contacts (struct-of-arrays) ───────────────────────────────
-const MAXC = 3000, S = 24;
+const MAXC = 3000, S = 24, HSIZE = 16384;
 // layout: 0-2 n, 3-5 ra, 6-8 rb, 9-11 t1, 12-14 t2, 15 mN, 16 mT1, 17 mT2, 18 jn, 19 jt1, 20 jt2, 21 target, 22 mu, 23 depth
 
 export class World {
@@ -247,6 +247,10 @@ export class World {
     this.sleepLin = 0.07; this.sleepAng = 0.5; this.sleepTime = 0.5;
     this.substeps = 0;
     this.onSubstep = null; // optional callback(dt) per substep (e.g. water drag)
+    // warm-starting cache: impulses of last substep's contacts keyed by (body A, body B, sample index)
+    this.cKey = new Int32Array(MAXC);
+    this.hKey = new Int32Array(HSIZE).fill(-1); this.hGen = new Int32Array(HSIZE); this.hJ = new Float64Array(HSIZE * 3);
+    this.gen = 1; this.warm = 0.85;
   }
   add(b) { if (b.isStatic) { this.statics.push(b); b.computeAABB(); } else this.bodies.push(b); b.updateInertia(); return b; }
   remove(b) { const a = b.isStatic ? this.statics : this.bodies; const i = a.indexOf(b); if (i >= 0) a.splice(i, 1); }
@@ -273,9 +277,10 @@ export class World {
     b.wsDirty = false;
   }
 
-  _addContact(a, b, nx, ny, nz, px, py, pz, depth) {
+  _addContact(a, b, nx, ny, nz, px, py, pz, depth, sample) {
     if (this.nc >= MAXC) return;
     const i = this.nc++, o = i * S, C = this.C;
+    this.cKey[i] = ((a.id + 1) * 4096 + (b ? b.id + 1 : 0)) * 64 + (sample & 63);
     this.ca[i] = a; this.cb[i] = b;
     C[o] = nx; C[o + 1] = ny; C[o + 2] = nz;
     C[o + 3] = px - a.pos.x; C[o + 4] = py - a.pos.y; C[o + 5] = pz - a.pos.z;
@@ -292,7 +297,7 @@ export class World {
       const x = w[i], y = w[i + 1], z = w[i + 2];
       const d = sdfWorld(b, x, y, z);
       if (d < sr + margin) {
-        this._addContact(a, b, N.x, N.y, N.z, x - N.x * sr, y - N.y * sr, z - N.z * sr, sr - d);
+        this._addContact(a, b, N.x, N.y, N.z, x - N.x * sr, y - N.y * sr, z - N.z * sr, sr - d, i / 3);
         found++;
       }
     }
@@ -325,7 +330,7 @@ export class World {
       if (a.pos.y - a.bound < gy + 0.01) {
         for (let k = 0; k < w.length; k += 3) {
           const d = w[k + 1] - sr - gy;
-          if (d < 0.002) this._addContact(a, null, 0, 1, 0, w[k], w[k + 1] - sr, w[k + 2], -d);
+          if (d < 0.002) this._addContact(a, null, 0, 1, 0, w[k], w[k + 1] - sr, w[k + 2], -d, k / 3);
         }
       }
       // statics
@@ -394,6 +399,23 @@ export class World {
         if (!dup) { const ev = this.impacts[this.impactCount++]; ev.a = a; ev.b = b; ev.speed = -vn; ev.x = a.pos.x + C[o + 3]; ev.y = a.pos.y + C[o + 4]; ev.z = a.pos.z + C[o + 5]; }
       }
     }
+    // warm start from the previous substep's impulses
+    const gen = this.gen, hK = this.hKey, hG = this.hGen, hJ = this.hJ, ws = this.warm;
+    for (let i = 0; i < this.nc; i++) {
+      const key = this.cKey[i];
+      let h = (Math.imul(key, 0x9E3779B1) >>> 0) & (HSIZE - 1);
+      for (let p = 0; p < 8; p++, h = (h + 1) & (HSIZE - 1)) {
+        if (hK[h] === key) {
+          if (hG[h] === gen - 1) {
+            const o = i * S, jn = hJ[h * 3] * ws, j1 = hJ[h * 3 + 1] * ws, j2 = hJ[h * 3 + 2] * ws;
+            C[o + 18] = jn; C[o + 19] = j1; C[o + 20] = j2;
+            this._apply(i, C[o] * jn + C[o + 9] * j1 + C[o + 12] * j2, C[o + 1] * jn + C[o + 10] * j1 + C[o + 13] * j2, C[o + 2] * jn + C[o + 11] * j1 + C[o + 14] * j2);
+          }
+          break;
+        }
+        if (hK[h] === -1) break;
+      }
+    }
     // 4. iterations
     const nc = this.nc;
     for (let it = 0; it < this.iterations; it++) {
@@ -419,6 +441,17 @@ export class World {
         if (lam !== 0) this._apply(i, tx * lam, ty * lam, tz * lam);
       }
     }
+    // store impulses for the next substep
+    for (let i = 0; i < this.nc; i++) {
+      const key = this.cKey[i], o = i * S;
+      let h = (Math.imul(key, 0x9E3779B1) >>> 0) & (HSIZE - 1), slot = -1;
+      for (let p = 0; p < 8; p++, h = (h + 1) & (HSIZE - 1)) {
+        if (hK[h] === key || hK[h] === -1 || hG[h] < gen - 1) { slot = h; break; }
+      }
+      if (slot < 0) continue;
+      hK[slot] = key; hG[slot] = gen; hJ[slot * 3] = C[o + 18]; hJ[slot * 3 + 1] = C[o + 19]; hJ[slot * 3 + 2] = C[o + 20];
+    }
+    this.gen++;
     // 5. integrate
     for (let i = 0; i < bodies.length; i++) {
       const b = bodies[i];
