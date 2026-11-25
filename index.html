@@ -3,125 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>百步穿杨 Archery Range</title>
+<title>游乐场 VR Playground</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;600;800&display=swap">
 <style>
-  /* Layout: full-bleed 3D stage, with a lacquered title card floating over the left third. */
+  /* Layout: full-bleed 3D stage; a night-ink title card floats over the left side. */
   :root {
-    --lacquer: #17110e; --lacquer-2: #251a15; --vermilion: #c0261d; --gold: #e2b85c;
-    --paper: #f1e6cf; --dim: #a8977a;
-    --brush: "Ma Shan Zheng", "Noto Serif SC", "Songti SC", serif;
-    --serif: "Noto Serif SC", "Songti SC", serif;
+    --ink: #0b1020; --ink-2: #161b30; --gold: #e2b85c; --vermilion: #c0261d;
+    --paper: #f1e6cf; --dim: #a8a0c0;
+    --brush: "Ma Shan Zheng", "Noto Serif SC", serif;
+    --sans: "Inter", "Segoe UI", system-ui, sans-serif;
     --latin: "Cormorant Garamond", Georgia, serif;
     color-scheme: dark;
   }
   [hidden] { display: none !important; }
-  html, body { height: 100%; margin: 0; background: var(--lacquer); color: var(--paper); overflow: hidden; }
-  body { font-family: var(--latin); font-size: 17px; }
+  html, body { height: 100%; margin: 0; background: var(--ink); color: var(--paper); overflow: hidden; }
+  body { font-family: var(--sans); font-size: 16px; }
   #stage, #stage canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-
   #overlay {
-    position: fixed; inset: 0; display: flex; align-items: center;
+    position: fixed; inset: 0; display: flex; align-items: center; overflow-y: auto;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
     padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(90deg, rgba(23,17,14,0.92) 0%, rgba(23,17,14,0.75) 40%, rgba(23,17,14,0) 75%);
-    overflow-y: auto;
+    background: linear-gradient(90deg, rgba(11,16,32,0.94) 0%, rgba(11,16,32,0.78) 45%, rgba(11,16,32,0.1) 80%);
   }
-  .card { max-width: 560px; min-width: 0; display: flex; flex-direction: column; gap: 22px; padding-left: clamp(0px, 4vw, 48px); }
-  .seal { display: inline-grid; place-items: center; width: 54px; height: 54px; background: var(--vermilion); color: var(--paper); font-family: var(--brush); font-size: 30px; border-radius: 6px; transform: rotate(-4deg); box-shadow: inset 0 0 0 3px rgba(241,230,207,0.35); }
-  h1 { margin: 0; font-family: var(--brush); font-weight: 400; font-size: clamp(64px, 12vw, 128px); line-height: 0.95; color: var(--gold); letter-spacing: 0.04em; text-wrap: balance; }
-  .pinyin { font-family: var(--latin); font-style: italic; font-size: 22px; color: var(--dim); margin-top: 6px; }
-  .lede { margin: 0; font-size: 20px; line-height: 1.5; max-width: 46ch; }
-  .lede b { color: var(--gold); font-weight: 700; }
+  .card { max-width: 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding-left: clamp(0px, 4vw, 48px); }
+  h1 { margin: 0; font-family: var(--brush); font-weight: 400; font-size: clamp(72px, 13vw, 140px); line-height: 0.95; color: var(--gold); text-wrap: balance; }
+  .sub { font-family: var(--latin); font-style: italic; font-size: 24px; color: var(--dim); margin-top: 4px; }
+  .lede { margin: 0; font-size: 18px; line-height: 1.55; max-width: 48ch; }
   .actions { display: flex; flex-wrap: wrap; gap: 12px; }
-  button { font: inherit; cursor: pointer; border-radius: 6px; padding: 12px 22px; font-size: 19px; border: 2px solid var(--gold); display: inline-flex; gap: 10px; align-items: baseline; }
-  button .cn { font-family: var(--brush); font-size: 26px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; padding: 12px 22px; font-size: 17px; font-weight: 600; border: 2px solid var(--gold); display: inline-flex; gap: 10px; align-items: baseline; }
+  button .cn { font-family: var(--brush); font-weight: 400; font-size: 24px; }
   #btn-vr { background: var(--vermilion); color: var(--paper); }
   #btn-desk { background: transparent; color: var(--gold); }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
   button:focus-visible { outline: 3px solid var(--paper); outline-offset: 3px; }
-  #vr-note { font-size: 15px; color: var(--dim); min-height: 1.2em; margin: -8px 0 0; }
-
-  .arsenal { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; border-top: 1px solid rgba(226,184,92,0.35); padding-top: 16px; }
-  .arsenal div { min-width: 0; }
-  .arsenal .cn { font-family: var(--brush); font-size: 26px; color: var(--gold); margin-right: 8px; }
-  .arsenal p { margin: 2px 0 0; font-size: 15px; color: var(--dim); line-height: 1.35; }
-  details { font-size: 15px; color: var(--dim); }
-  summary { cursor: pointer; color: var(--paper); font-size: 16px; }
+  #vr-note { font-size: 14px; color: var(--dim); min-height: 1.2em; margin: -8px 0 0; }
+  .glyphs { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--brush); font-size: 30px; color: var(--gold); opacity: 0.85; }
+  details { font-size: 14px; color: var(--dim); }
+  summary { cursor: pointer; color: var(--paper); font-size: 15px; }
   .controls { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin-top: 10px; }
   .controls dt { color: var(--gold); white-space: nowrap; }
   .controls dd { margin: 0; }
-  @media (max-width: 520px) { .arsenal { grid-template-columns: 1fr; } }
-
   #crosshair { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; pointer-events: none; }
   #crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(241,230,207,0.85); box-shadow: 0 0 2px #000; }
   #crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
   #crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
-  #crosshair.charged::before, #crosshair.charged::after { background: #ff5a3a; }
-  #scope { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0 34vmin, #000 35vmin); }
-  #scope::before { content: ""; position: absolute; left: 50%; top: 15vmin; bottom: 15vmin; width: 1px; background: #111; }
-  #scope::after { content: ""; position: absolute; top: 50%; left: calc(50% - 35vmin); width: 70vmin; height: 1px; background: #111; }
   #deskhud {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    background: rgba(23,17,14,0.82); border: 1px solid var(--gold); border-radius: 6px; padding: 8px 16px;
-    font-size: 17px; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
+    background: rgba(11,16,32,0.85); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 16px;
+    font-size: 15px; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
   }
-  #deskhud b { font-family: var(--brush); font-weight: 400; color: var(--gold); font-size: 24px; margin-right: 4px; }
-  #deskhud span { color: var(--paper); margin: 0 10px; }
-  #deskhud i { color: var(--dim); }
-  #btn-menu { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); padding: 6px 12px; font-size: 15px; background: rgba(23,17,14,0.7); color: var(--gold); }
-  #overlay:not([hidden]) ~ #btn-menu { display: none; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .topbtns { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+  .topbtns button { padding: 6px 12px; font-size: 14px; background: rgba(11,16,32,0.75); color: var(--gold); }
+  #overlay:not([hidden]) ~ .topbtns { display: none; }
 </style>
 <script type="importmap">
-  { "imports": { "three": "./vendor/three.module.min.js" } }
+  { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
 </script>
 </head>
 <body>
 <div id="stage"></div>
-
 <div id="overlay">
   <div class="card">
-    <span class="seal" aria-hidden="true">射</span>
     <div>
-      <h1>百步穿杨</h1>
-      <div class="pinyin">bǎi bù chuān yáng — pierce a willow leaf at a hundred paces</div>
+      <h1>游乐场</h1>
+      <div class="sub">yóulèchǎng — a VR playground of twelve games</div>
     </div>
-    <p class="lede">A walled archery range at dusk. Hit the targets, pop the lanterns, thread the coin's square hole, and find the <b>willow leaf</b> ninety metres out. Shoot the <b>gong</b> to start a round that lasts one stick of incense.</p>
+    <p class="lede">Archery, a voxel sandbox, rhythm slicing, table tennis, drums, climbing, flight, hand-tracked fireflies, carnival throws, a tabletop siege, a dodge dojo and 3D painting. Pick one from the hub; hold <b>Y</b> on the left controller to come back.</p>
+    <div class="glyphs" aria-hidden="true">射 土 刀 乒 鼓 山 飞 萤 投 城 拳 画</div>
     <div class="actions">
       <button id="btn-vr" disabled><span class="cn">进入</span> Enter VR</button>
       <button id="btn-desk"><span class="cn">桌面</span> Play on desktop</button>
     </div>
     <p id="vr-note">Checking for a headset…</p>
-    <div class="arsenal">
-      <div><span class="cn">弓</span>Horn bow<p>Arrows drop over distance. Aim high. Limited arrows.</p></div>
-      <div><span class="cn">火龙</span>Fire-dragon rocket<p>Slow to arrive, wide blast. Lead your target.</p></div>
-      <div><span class="cn">穿云</span>Cloud-piercer rifle<p>Hold the trigger to charge, release to fire. Scoped.</p></div>
-      <div><span class="cn">手铳</span>Hand cannon<p>Unlimited shots. The only gun that cracks supply crates.</p></div>
-    </div>
     <details>
-      <summary>Controls</summary>
+      <summary>Desktop controls</summary>
       <dl class="controls">
-        <dt>VR bow</dt><dd>Bow in your off hand. Bring your main hand to the string, hold trigger or grip, pull back, let go.</dd>
-        <dt>VR guns</dt><dd>Main hand aims. Trigger fires. Rifle: hold to charge, then release.</dd>
-        <dt>A / X · B / Y</dt><dd>Next / previous weapon</dd>
-        <dt>Thumbstick</dt><dd>Push forward to aim a teleport arc, let go to jump. Flick sideways to snap turn. Click to return to the shooting line.</dd>
-        <dt>Ammo</dt><dd>Shoot the glowing floating crates with the 手铳 hand cannon. It never runs out, and empty weapons switch to it.</dd>
-        <dt>Boards</dt><dd>Point and pull the trigger to buy upgrades and change settings</dd>
-        <dt>Desktop</dt><dd>Mouse aims, hold left button to draw or charge. Right button zooms the rifle. 1–4 or Q/E switch weapons. WASD moves. G rings the gong. M toggles music.</dd>
+        <dt>Mouse</dt><dd>Click to lock, move to look. Left button = main trigger, right = main grip.</dd>
+        <dt>WASD</dt><dd>Left thumbstick (move)</dd>
+        <dt>Arrows</dt><dd>Right thumbstick</dd>
+        <dt>E / R</dt><dd>A / B buttons</dd>
+        <dt>Q / F</dt><dd>Left trigger / left grip</dd>
+        <dt>X / Z</dt><dd>X / Y buttons</dd>
+        <dt>Tab</dt><dd>Back to the hub</dd>
       </dl>
     </details>
   </div>
 </div>
-
 <div id="crosshair" hidden></div>
-<div id="scope" hidden></div>
 <div id="deskhud" hidden></div>
-<button id="btn-menu">菜单 Menu</button>
-
-<script type="module" src="./src/main.js"></script>
+<div class="topbtns"><button id="btn-hub" hidden>游 Hub</button><button id="btn-menu">菜单 Menu</button></div>
+<script type="module" src="./src/platform/main.js"></script>
 </body>
 </html>
