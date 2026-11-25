@@ -308,7 +308,7 @@ export class Player {
     const vr = !input.desktop;
     // place both at the camera's rig-local pose
     this.vig.position.copy(cam.position); this.vig.quaternion.copy(cam.quaternion);
-    this.vig.translateZ(-0.3); this.vig.scale.setScalar(0.5);
+    this.vig.translateZ(-0.3); this.vig.scale.setScalar(1.0);
     this.blackout.position.copy(cam.position);
     const want = vr && this.game.settings.vignette ? Math.min(1, (this.speed / (4 * this.scale)) * 0.8 + (this._turning ? 0.6 : 0)) : 0;
     this.vigStrength += (want - this.vigStrength) * (1 - Math.exp(-dt * 8));

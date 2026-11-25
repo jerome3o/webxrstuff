@@ -73,7 +73,7 @@ export class Interaction {
       _p.copy(h.rayDir()).multiplyScalar(0.07 * g.player.scale).add(h.gripPos);
       const id = world.getBlock(Math.floor(_p.x), Math.floor(_p.y), Math.floor(_p.z));
       const d = BLOCKS[id];
-      if (id > 0 && d && d.render !== 'liquid') {
+      if (id > 0 && d && d.render !== 'liquid' && d.render !== 'cross') {
         physical = true;
         this.target = this._setT(Math.floor(_p.x), Math.floor(_p.y), Math.floor(_p.z), 0, 1, 0, id, true);
       }
@@ -164,7 +164,9 @@ export class Interaction {
     const def = BLOCKS[id];
     const ev = g.events.emit('blockBreak', { x, y, z, id, cancel: false });
     if (ev.cancel) return false;
-    world.setBlock(x, y, z, 0, { cause: 'player' });
+    // static water: a hole next to water fills with water instead of air
+    const W = B.water, wet = world.getBlock(x, y + 1, z) === W || world.getBlock(x + 1, y, z) === W || world.getBlock(x - 1, y, z) === W || world.getBlock(x, y, z + 1) === W || world.getBlock(x, y, z - 1) === W;
+    world.setBlock(x, y, z, wet ? W : 0, { cause: 'player' });
     const drops = opts.drops ? rollDrops(def) : [];
     for (const d of drops) g.spawnDrop(d.id, d.count, _p.set(x + 0.5, y + 0.4, z + 0.5));
     this._burst({ x, y, z }, def, 14, 1);

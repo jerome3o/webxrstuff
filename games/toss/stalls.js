@@ -118,8 +118,8 @@ export class Stall {
         c.lineWidth = 6; c.strokeStyle = '#e2b85c'; c.stroke();
         c.textAlign = 'left'; c.textBaseline = 'alphabetic';
         c.fillStyle = '#e2b85c'; c.font = `64px ${FONTS.brush}`; c.fillText(this.cn, 28, 84);
-        c.fillStyle = '#f1e6cf'; fitText(c, this.name, 28 + c.measureText(this.cn).width + 16 + 150, 78, 300, 38, FONTS.latin);
-        c.textAlign = 'left';
+        const cw = c.measureText(this.cn).width;
+        c.fillStyle = '#f1e6cf'; fitText(c, this.name, 28 + cw + 22, 78, W - cw - 80, 44, FONTS.latin);
         c.font = `26px ${FONTS.sans}`; c.fillStyle = '#c8bca8';
         wrap(c, this.rules, 28, 122, W - 56, 30, 2);
         const thrown = this.thrownCount();
@@ -228,13 +228,15 @@ export class Stall {
     this.state = 'done'; this.stateT = 0; this.lastTickets = tickets;
     if (this.isBetter(score)) { this.best = score; this.game.data.best[this.id] = score; this.game.persist(); }
     this.message = tickets > 0 ? `${this.resultText(score)}  +${tickets} ticket${tickets > 1 ? 's' : ''}!` : `${this.resultText(score)}. No prize this time.`;
-    const top = this.frame.toWorld(0, 2.4, -1.5);
+    const top = this.frame.toWorld(0, 2.6, 0.9);
     if (tickets > 0) {
       this.game.addTickets(tickets, this);
       this.stripN = Math.min(20, tickets); this.stripT = 3.2;
       this.game.sounds.tickets(this.strip.position, tickets);
       this.operator.say(tickets >= this.bigWin ? 'Incredible! A big winner!' : (this.winLines ?? ['Winner! Here are your tickets.'])[(Math.random() * (this.winLines?.length ?? 1)) | 0], 4.5);
       this.game.celebrate(top, tickets >= this.bigWin);
+      const c = this.frame.toWorld(0, 1.9, 0.2, _v);
+      this.game.fireworks.confetti(c.x, c.y, c.z, 40 + tickets * 4);
     } else {
       this.operator.say(['So close! Try again?', 'Ah, unlucky! Another go?', 'Nearly had it!'][(Math.random() * 3) | 0], 4);
       this.game.sounds.miss(top);
@@ -534,20 +536,29 @@ export class HoopStall extends Stall {
     // moving dragon head + hoop
     this.dragon = new THREE.Group();
     const b = new Builder();
-    const red = 0xc02a1a, gold = 0xffc040, green = 0x2a9a4a;
-    b.box(null, 0, 0.1, -0.1, 0.5, 0.38, 0.5, red);            // head
-    b.box(null, 0, 0.02, 0.2, 0.36, 0.2, 0.3, red);            // snout
-    b.box(null, 0, -0.14, 0.12, 0.34, 0.07, 0.36, 0xa01a10);   // jaw (open)
-    b.box(null, 0, -0.07, 0.18, 0.3, 0.06, 0.26, 0x400808);    // mouth
+    const red = 0xc8301c, gold = 0xffc040, green = 0x2aa04a, dk = 0x8a1a10;
+    b.sphere(null, 0, 0.12, -0.08, 0.27, 0.24, 0.3, red, 14);         // skull
+    b.sphere(null, 0, 0.06, 0.2, 0.19, 0.13, 0.2, red, 12);           // snout
+    b.sphere(null, 0, -0.1, 0.12, 0.17, 0.06, 0.22, dk, 10);          // lower jaw (open)
+    b.sphere(null, 0, -0.03, 0.16, 0.14, 0.05, 0.17, 0x3a0606, 10);   // mouth
+    b.sphere(null, 0, 0.1, 0.38, 0.08, 0.06, 0.04, 0xe04a2a, 8);      // nose
     for (const sx of [-1, 1]) {
-      b.sphere(null, sx * 0.15, 0.2, 0.15, 0.06, 0.06, 0.04, 0xffffff, 8);
-      b.sphere(null, sx * 0.15, 0.2, 0.185, 0.03, 0.035, 0.02, 0x101010, 6);
-      b.cone(null, sx * 0.17, 0.4, -0.2, 0.04, 0.3, gold, 6, -0.5, 0, sx * 0.4);
-      b.cyl(null, sx * 0.25, 0.0, 0.3, 0.006, 0.006, 0.45, gold, 4, 0, 0, sx * 1.1);
-      b.box(null, sx * 0.27, 0.1, -0.1, 0.04, 0.3, 0.4, green);
-      b.sphere(null, sx * 0.09, 0.08, 0.36, 0.025, 0.02, 0.02, 0x200808, 6);
+      b.sphere(null, sx * 0.13, 0.22, 0.14, 0.065, 0.065, 0.05, 0xffffff, 10);   // eyes
+      b.sphere(null, sx * 0.135, 0.22, 0.18, 0.032, 0.04, 0.02, 0x101010, 8);
+      b.sphere(null, sx * 0.13, 0.29, 0.13, 0.08, 0.025, 0.05, gold, 8);          // brows
+      b.cone(null, sx * 0.13, 0.42, -0.22, 0.035, 0.32, gold, 6, -0.7, 0, sx * 0.35); // horns
+      b.cyl(null, sx * 0.3, 0.02, 0.36, 0.006, 0.006, 0.5, gold, 4, 0.3, 0, sx * 1.2); // whiskers
+      b.sphere(null, sx * 0.05, 0.1, 0.4, 0.018, 0.014, 0.01, 0x200808, 6);     // nostrils
+      b.cone(null, sx * 0.07, -0.05, 0.3, 0.018, 0.05, 0xffffff, 4, Math.PI, 0, 0); // fangs
+      for (let k = 0; k < 3; k++) b.cone(null, sx * (0.24 + k * 0.03), 0.05 - k * 0.07, -0.1 - k * 0.03, 0.05, 0.22, green, 5, 0, 0, sx * (1.9 + k * 0.2)); // mane
     }
-    for (let i = 0; i < 5; i++) b.cone(null, 0, 0.32 - i * 0.07, -0.4 - i * 0.02, 0.06, 0.2, 0x3aa05a, 5, -1.9, 0, 0);
+    for (let i = 0; i < 5; i++) b.cone(null, 0, 0.36 - i * 0.05, -0.3 - i * 0.07, 0.05, 0.18, green, 5, -1.4 - i * 0.1, 0, 0);
+    // body coils trailing behind
+    for (let i = 0; i < 6; i++) {
+      const a = i * 0.7;
+      b.sphere(null, Math.sin(a) * 0.25, -0.05 + Math.cos(a) * 0.12 - i * 0.04, -0.45 - i * 0.2, 0.15 - i * 0.012, 0.15 - i * 0.012, 0.15, i % 2 ? red : 0xd84020, 10);
+      b.cone(null, Math.sin(a) * 0.25, 0.11 + Math.cos(a) * 0.12 - i * 0.05, -0.45 - i * 0.2, 0.04, 0.12, green, 5);
+    }
     // hoop + net
     const hoopY = -0.35, hoopZ = 0.5, R = 0.17;
     b.torus(null, 0, hoopY, hoopZ, R, 0.012, gold, Math.PI / 2, 0, 0);

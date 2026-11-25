@@ -24,7 +24,7 @@ const SAVE_EVERY = 20;
 export async function create(ctx) {
   const { scene, input, rig, camera } = ctx;
   const meta = ctx.load('voxel:meta', {}) || {};
-  const settings = { ...DEFAULT_SETTINGS, ...(meta.settings || {}) };
+  const settings = { ...DEFAULT_SETTINGS, renderDistance: ctx.isXR() ? 5 : 6, ...(meta.settings || {}) };
   const seed = Number.isFinite(meta.seed) ? meta.seed : randomSeed();
   const saved = ctx.load(`voxel:world:${seed}`, null);
 
@@ -125,6 +125,11 @@ export async function create(ctx) {
   game.events.emit('load', { data: saved ?? {} });
   if (!saved) game.toast('Welcome to Blockfell', 3);
 
+  // save when the tab is hidden or closed (dispose() doesn't run then)
+  const onHide = (e) => { if (e.type === 'pagehide' || document.visibilityState !== 'visible') { try { save(); } catch { } } };
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', onHide);
+
   // ── per-frame ────────────────────────────────────────────
   let saveT = SAVE_EVERY, flickReady = true, offYStart = -1;
   const camPos = new THREE.Vector3(), lightOut = { sky: 15, block: 0 };
@@ -201,6 +206,8 @@ export async function create(ctx) {
       hud();
     },
     dispose() {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onHide);
       try { save(); } catch (e) { console.error('[voxel] save failed', e); }
       if (game._nextSeed != null) ctx.save('voxel:meta', { seed: game._nextSeed, settings });
       game.events.emit('dispose', {});

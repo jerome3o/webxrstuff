@@ -452,9 +452,14 @@ export async function create(ctx) {
 
   function slideOnGround(dt) {
     S.slide *= Math.exp(-dt * 2.4);
-    rig.position.x += S.slideDir.x * S.slide * dt; rig.position.z += S.slideDir.z * S.slide * dt;
+    const dx = S.slideDir.x * S.slide * dt, dz = S.slideDir.z * S.slide * dt;
+    rig.position.x += dx; rig.position.z += dz;
     camera.getWorldPosition(headW);
-    const gy = sampler.surfaceY(headW.x, headW.z);
+    let gy = sampler.surfaceY(headW.x, headW.z);
+    if (gy - rig.position.y > 0.25) { // don't ride up cliffs: stop against them
+      rig.position.x -= dx; rig.position.z -= dz; S.slide = 0;
+      camera.getWorldPosition(headW); gy = sampler.surfaceY(headW.x, headW.z);
+    }
     rig.position.y += (gy - rig.position.y) * Math.min(1, dt * 8);
     groundSpeed = S.slide; vy = 0;
     if (S.slide < 0.4) { S.state = 'landed'; S.takeoff = 0; say('Landed. Flap hard (or trigger) to take off · A/B: perch', 6, '#cfe4ea'); }

@@ -192,7 +192,7 @@ export async function create(ctx) {
   }
 
   // ── song lifecycle ──
-  function startSong(i) {
+  function startSong(i, from = 0) {
     const def = SONGS[i];
     song = buildSong(def, hard);
     song.index = i;
@@ -204,9 +204,9 @@ export async function create(ctx) {
     useAudio = !!(actx && actx.state !== 'closed');
     if (actx && actx.state !== 'running') actx.resume?.();
     clockInit = false; lastPerf = performance.now(); audioWait = 0;
-    if (useAudio) { t0 = actx.currentTime + 0.5; conductor.start(song, t0); }
-    else { fallbackPos = -0.5; }
-    songPos = -0.5;
+    if (useAudio) { t0 = actx.currentTime + 0.5 - from; conductor.start(song, t0, from); }
+    else { fallbackPos = from - 0.5; }
+    songPos = from - 0.5;
     setState('play');
   }
   function resetPlay() {
@@ -457,7 +457,7 @@ export async function create(ctx) {
       b.histDir[b.histI * 3] = b.dir.x; b.histDir[b.histI * 3 + 1] = b.dir.y; b.histDir[b.histI * 3 + 2] = b.dir.z; b.histT[b.histI] = time;
       b.trail.push(b.base, b.tip, dt);
       b.flash = Math.max(0, b.flash - dt * 5);
-      b.glowMat.opacity = 0.45 + 0.4 * b.flash + 0.1 * pulse;
+      b.glowMat.opacity = b.active ? 0.45 + 0.4 * b.flash + 0.1 * pulse : 0.12;
       if (!b.hasPrev) { b.pBase.copy(b.base); b.pTip.copy(b.tip); b.hasPrev = true; b.fresh = true; } else b.fresh = false;
     }
   }
@@ -671,7 +671,7 @@ export async function create(ctx) {
         _m.compose(_v, _q, _s); bombs.setMatrixAt(nbo++, _m);
         continue;
       }
-      const sc = Math.min(1, 0.3 + (n.y - WATER_Y) * 1.2);
+      const sc = Math.min(1, 0.3 + (n.y - WATER_Y) * 1.2, Math.max(0.02, 1 - (n.z + 0.4) / 0.8)); // shrink once past the player
       _q.identity(); _s.setScalar(sc); _v.set(n.x, n.y + bob, n.z);
       _m.compose(_v, _q, _s); bodies.setMatrixAt(nb, _m); bodies.setColorAt(nb, COLORS[n.hand]); nb++;
       // glyph on the front face
@@ -794,7 +794,7 @@ export async function create(ctx) {
       get state() { return state; }, get songPos() { return songPos; }, get active() { return active; }, get song() { return song; },
       get stats() { return { lastBad, score, combo, maxCombo, mult, energy, hits, misses, badCuts, bombsHit, useAudio, state, songPos }; },
       get blades() { return blades; },
-      start: (i, h = false) => { hard = h; startSong(i); },
+      start: (i, h = false, from = 0) => { hard = h; startSong(i, from); },
       finish: () => endSong(false),
       setEnergy: (e) => { energy = e; },
       cursor,

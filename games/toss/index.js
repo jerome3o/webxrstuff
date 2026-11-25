@@ -209,7 +209,7 @@ function makeMaterials() {
   })();
   return {
     figure: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x3a2a22 }),
-    prize: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x181008 }),
+    prize: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x3a2a1a }),
     tin: new THREE.MeshPhongMaterial({ map: tinTex, shininess: 90, specular: 0x777777, emissive: 0x100808 }),
     cloth: new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x100808 }),
     ring: new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x281810 }),
@@ -290,16 +290,20 @@ function buildStreet(game) {
   });
 
   // background buildings with lit windows
-  const bcol = [0x1e1a26, 0x241c22, 0x1a1e28, 0x2a2024];
+  const bcol = [0x6a5a6a, 0x7a5a50, 0x5a5a70, 0x6a5048];
   for (const sx of [-1, 1]) {
     for (let z = 5; z > -26; z -= 3.6 + r() * 1.5) {
       const w = 3 + r() * 1.2, h = 4.5 + r() * 5, d = 3 + r() * 2, x = sx * (7.3 + d / 2 + r() * 0.5);
       L.box(null, x, h / 2, z, d, h, w, bcol[(r() * 4) | 0]);
-      L.box(null, x, h + 0.15, z, d + 0.6, 0.3, w + 0.6, 0x1a2a28);
+      L.box(null, x, h + 0.15, z, d + 0.6, 0.3, w + 0.6, 0x3a5a50);
       for (let fy = 1.5; fy < h - 0.8; fy += 1.3) for (let fz = -w / 2 + 0.6; fz < w / 2 - 0.4; fz += 0.9) {
         if (r() < 0.45) G.box(null, x - sx * (d / 2 + 0.01), fy, z + fz, 0.02, 0.6, 0.45, r() < 0.5 ? 0xffc070 : 0xff9a50);
       }
-      if (r() < 0.5) game.lanterns.push({ p: new THREE.Vector3(x - sx * (d / 2 + 0.3), Math.min(h - 0.5, 3.6), z), s: 1.1 });
+      if (r() < 0.5) {
+        const lp = new THREE.Vector3(x - sx * (d / 2 + 0.3), Math.min(h - 0.5, 3.6), z);
+        game.lanterns.push({ p: lp, s: 1.1 });
+        game.lamps.push({ x: lp.x, y: lp.y - 0.4, z: lp.z, color: new THREE.Color(1, 0.5, 0.3), intensity: 0.9, range: 3.5 });
+      }
     }
   }
   for (let x = -12; x < 12; x += 3.5 + r()) {
@@ -395,10 +399,10 @@ function buildSettings(game) {
       lines.forEach((l, i) => fitText(c, l, 40 + 0, 160 + i * 44, W - 80, 30, FONTS.sans));
       c.fillStyle = '#f1e6cf'; c.font = `600 38px ${FONTS.sans}`; c.fillText('Aim assist', 40, 350);
       labels.forEach((lb, i) => panel.button('assist' + i, 300 + i * 190, 300, 170, 74, lb, () => { data.assist = i; game.grabber.assist = ASSIST_LEVELS[i]; game.persist(); }, { size: 34, active: data.assist === i }));
-      c.fillStyle = '#f1e6cf'; c.fillText('Turning', 40, 460);
+      c.textAlign = 'left'; c.fillStyle = '#f1e6cf'; c.font = `600 38px ${FONTS.sans}`; c.fillText('Turning', 40, 460);
       panel.button('snap', 300, 410, 260, 74, 'Snap', () => { data.smoothTurn = false; game.persist(); game.setTurn?.(false); }, { size: 34, active: !data.smoothTurn });
       panel.button('smooth', 580, 410, 260, 74, 'Smooth', () => { data.smoothTurn = true; game.persist(); game.setTurn?.(true); }, { size: 34, active: !!data.smoothTurn });
-      c.fillStyle = '#ffd060'; c.font = `700 46px ${FONTS.sans}`; c.fillText(`${data.tickets} tickets`, 40, 580);
+      c.textAlign = 'left'; c.fillStyle = '#ffd060'; c.font = `700 46px ${FONTS.sans}`; c.fillText(`${data.tickets} tickets`, 40, 580);
       c.fillStyle = '#a8a0c0'; c.font = `30px ${FONTS.sans}`; c.fillText(`${data.prizes.length} prize${data.prizes.length === 1 ? '' : 's'} on your shelf (opposite)`, 40, 630);
       c.fillText('Each stall has a Reset button on its post.', 40, 680);
     },

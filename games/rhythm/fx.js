@@ -78,8 +78,8 @@ export class Halves {
       // half geometry lies on +X; rotate so +X points along +n (s=0) or -n (s=1)
       it.q.setFromAxisAngle(_ax.set(0, 0, 1), roll + (s ? Math.PI : 0));
       const sg = s ? -1 : 1;
-      _v.copy(push); if (_v.lengthSq() > 9) _v.setLength(3);
-      it.v.set(n.x * sg * 1.6, n.y * sg * 1.6 + 1.0, 0.6).addScaledVector(_v, 0.3);
+      _v.set(push.x, push.y, 0); if (_v.lengthSq() > 9) _v.setLength(3);
+      it.v.set(n.x * sg * 1.6, n.y * sg * 1.6 + 1.0, -0.4).addScaledVector(_v, 0.3);
       it.ax.set(n.y * sg, -n.x * sg, (Math.random() - 0.5)).normalize();
       it.w = 5 + Math.random() * 4;
       it.col.copy(color);
@@ -93,7 +93,7 @@ export class Halves {
       if (it.life <= 0) { it.on = false; continue; }
       it.v.y -= 9.8 * dt;
       it.p.addScaledVector(it.v, dt);
-      if (it.p.z > -0.35) it.life = Math.min(it.life, 0.12); // never fly through the player's face
+      if (it.p.z > -0.6) it.life = Math.min(it.life, 0.12); // never fly through the player's face
       if (it.p.y < waterY) { it.p.y = waterY; it.v.multiplyScalar(0.3); it.v.y = 0; it.w *= 0.9; it.life = Math.min(it.life, 0.5); }
       _q.setFromAxisAngle(it.ax, it.w * dt); it.q.premultiply(_q);
       const sc = Math.min(1, it.life / 0.4);

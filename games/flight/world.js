@@ -479,7 +479,12 @@ export function buildWorld(scene, gen, sampler) {
   scene.add(instanced(conifer(), tmat, trees[0], (c, it) => c.setScalar(it[5])));
   scene.add(instanced(broadleaf(), tmat, trees[1], (c, it) => c.setRGB(it[5], it[5] * (0.95 + 0.1 * Math.sin(it[0])), it[5] * 0.9)));
   for (const m of buildVillages(sampler)) scene.add(m);
-  const perchY = sampler.groundY(PERCH.x, PERCH.z);
+  // deck sits on the highest terrain vertex near the perch so no slope pokes through it
+  let perchY = sampler.groundY(PERCH.x, PERCH.z);
+  for (let j = 0; j < gen.S; j++) for (let i = 0; i < gen.S; i++) {
+    const x = -HALF + i * CELL, z = -HALF + j * CELL;
+    if (Math.hypot(x - PERCH.x, z - PERCH.z) < 14) perchY = Math.max(perchY, gen.height[j * gen.S + i] + 0.05);
+  }
   scene.add(buildPerch(perchY));
   scene.add(buildClouds(sampler));
   const th = buildThermals(sampler);
