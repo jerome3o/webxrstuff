@@ -94,6 +94,21 @@ const SPRITES = {
     p.clear(); blob(p, 8, 9.5, 5, 5, '#c79ad6', '#9e6bb8', '#744a92');
     line(p, 8, 4, 9, 2, '#7a5638'); p.set(10, 2, '#8fc07a'); p.set(11, 3, '#8fc07a'); glowDots(p, [[6, 7], [6, 8]], '#ecd6f4'); outline(p);
   },
+  roast_haunch(p) {
+    p.clear(); blob(p, 6.5, 9.5, 5, 4.2, '#d9a066', '#b5713f', '#8a4f2c');
+    line(p, 10, 6, 13, 3, '#f3ead6'); p.set(13, 2, '#fff8ea'); p.set(14, 3, '#fff8ea'); p.set(12, 2, '#f3ead6');
+    glowDots(p, [[4, 8], [5, 7], [7, 11]], '#f2c48a'); outline(p);
+  },
+  seared_glimmerfin(p) {
+    p.clear(); blob(p, 7, 8, 5.5, 3.4, '#e8c58a', '#c99a5c', '#9a6d3f');
+    for (let x = 4; x < 11; x += 2) { p.set(x, 7, '#7a4f2c'); p.set(x + 1, 9, '#7a4f2c'); }
+    p.set(13, 6, '#c99a5c'); p.set(13, 10, '#c99a5c'); p.set(14, 5, '#9a6d3f'); p.set(14, 11, '#9a6d3f'); p.set(13, 8, '#9a6d3f'); p.set(12, 7, '#c99a5c'); p.set(12, 9, '#c99a5c');
+    outline(p);
+  },
+  roast_flank(p) {
+    p.clear(); blob(p, 8, 8.5, 6, 4.5, '#d9a066', '#b5713f', '#8a4f2c');
+    line(p, 4, 7, 11, 11, '#f2d3a6'); glowDots(p, [[6, 6]], '#f6d6aa'); outline(p);
+  },
   sling(p) {
     p.clear(); line(p, 4, 14, 7, 9, '#9a7350'); line(p, 7, 9, 5, 3, '#9a7350'); line(p, 7, 9, 11, 4, '#9a7350');
     line(p, 5, 3, 8, 6, '#e6a6b8'); line(p, 11, 4, 8, 6, '#e6a6b8'); p.set(8, 6, '#c47e93'); p.set(8, 7, '#c47e93'); outline(p);
@@ -107,14 +122,14 @@ const SPRITES = {
 
 // id, key, name, extra
 const DEFS = [
-  [420, 'mossback_haunch', 'Mossback Haunch', { food: { hunger: 3, saturation: 1.6 } }],
+  [420, 'mossback_haunch', 'Mossback Haunch', { food: { hunger: 3, saturation: 1.6 }, smelt: { to: 'roast_haunch', time: 6 } }],
   [421, 'moss_hide', 'Moss Hide', {}],
   [422, 'kite_plume', 'Kite Plume', {}],
-  [423, 'glimmerfin', 'Raw Glimmerfin', { food: { hunger: 2, saturation: 1 } }],
+  [423, 'glimmerfin', 'Raw Glimmerfin', { food: { hunger: 2, saturation: 1 }, smelt: { to: 'seared_glimmerfin', time: 5 } }],
   [424, 'ink_essence', 'Ink Essence', {}],
   [425, 'crab_shell', 'Cragcrab Shell', {}],
   [426, 'hornbloom_antler', 'Hornbloom Antler', {}],
-  [427, 'hornbloom_venison', 'Hornbloom Flank', { food: { hunger: 4, saturation: 2 } }],
+  [427, 'hornbloom_venison', 'Hornbloom Flank', { food: { hunger: 4, saturation: 2 }, smelt: { to: 'roast_flank', time: 6 } }],
   [428, 'moth_dust', 'Lantern Dust', {}],
   [429, 'wyrm_heart', 'Wyrmheart Ember', { stack: 16, food: { hunger: 10, saturation: 12, heal: 20, always: true } }],
   [430, 'wyrm_scale', 'Deep Wyrm Scale', {}],
@@ -122,6 +137,9 @@ const DEFS = [
   [432, 'plumfruit', 'Blossom Plum', { food: { hunger: 4, saturation: 2.4 } }],
   [433, 'sling', 'Twine Sling', { kind: 'weapon', stack: 1, weapon: { damage: 1, ranged: true, ammo: ['rubble', 'shingle'] } }],
   [434, 'bedroll', 'Bedroll', { kind: 'bedroll', stack: 1 }],
+  [435, 'roast_haunch', 'Roast Haunch', { food: { hunger: 8, saturation: 12 } }],
+  [436, 'seared_glimmerfin', 'Seared Glimmerfin', { food: { hunger: 5, saturation: 6 } }],
+  [437, 'roast_flank', 'Roast Hornbloom Flank', { food: { hunger: 8, saturation: 12.8 } }],
 ];
 
 for (const [name, fn] of Object.entries(SPRITES)) registerSprite(name, fn);
@@ -137,6 +155,7 @@ export function meleeDamage(stack) {
   const d = ITEMS[stack.id];
   if (!d) return 1;
   if (d.weapon && !d.weapon.ranged && Number.isFinite(d.weapon.damage)) return d.weapon.damage;
+  if (Number.isFinite(d.damage)) return d.damage;   // crafting plugin: blades etc. carry a top-level damage
   const t = d.tool;
   if (t) {
     const tier = t.tier ?? 1;

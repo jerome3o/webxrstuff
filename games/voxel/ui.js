@@ -197,7 +197,14 @@ export class GameUI {
     if (g.mode === 'creative') {
       const list = this.paletteList || (this.paletteList = ITEMS.filter(d => d && (d.kind !== 'block' || BLOCKS[d.id]?.creative !== false)).map(d => d.id));
       const cols = 12, size = 68, gap = 8, x0 = (W - (cols * size + (cols - 1) * gap)) / 2, y0 = 106;
-      list.forEach((id, i) => {
+      // paged: 6 rows per page (phase-2 content made the palette longer than one screen)
+      const per = cols * 6, pages = Math.max(1, Math.ceil(list.length / per));
+      const pg = this.palPage = Math.min(this.palPage ?? 0, pages - 1);
+      if (pages > 1) {
+        p.button('pal:prev', x0, 562, 80, 46, '◀', () => { this.palPage = (pg + pages - 1) % pages; }, BTN);
+        p.button('pal:next', W - x0 - 80, 562, 80, 46, '▶', () => { this.palPage = (pg + 1) % pages; }, BTN);
+      }
+      list.slice(pg * per, pg * per + per).forEach((id, i) => {
         const cx = x0 + (i % cols) * (size + gap), cy = y0 + Math.floor(i / cols) * (size + gap);
         const def = ITEMS[id];
         this.slotButton(p, 'pal' + id, cx, cy, size, { id, count: 1 }, () => {
@@ -206,7 +213,7 @@ export class GameUI {
       });
       this._hotbarRow(c, W, H, p, 616, (i) => inv.select(i));
       c.fillStyle = COL.dim; c.font = `400 24px ${FONTS.sans}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('Pick a block or tool: it goes into the highlighted hotbar slot.', W / 2, 597);
+      c.fillText(pages > 1 ? `Page ${pg + 1} / ${pages} · picks go into the highlighted hotbar slot` : 'Pick a block or tool: it goes into the highlighted hotbar slot.', W / 2, pages > 1 ? 586 : 597);
       return;
     }
     // survival pack: 27 storage + hotbar; click to pick up / put down / swap / merge

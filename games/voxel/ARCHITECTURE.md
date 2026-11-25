@@ -157,3 +157,55 @@ sprint, LMB break, RMB place, 1-9 / wheel hotbar, E pack, O settings, F toggle f
 Generation + meshing ≈ 5 + 3.5 ms per chunk on a desktop CPU, all in the worker; the main thread caps
 loads in flight (3) and uploads ≤2 meshes per frame. One draw call per chunk for opaque + cutout + plants,
 one for water. Chunk bounds are tight in y for frustum culling. Day/night changes only uniforms.
+
+## Crafting plugin (phase 2)
+
+Files: `plugins/crafting.js` (install, systems), `plugins/crafting/content.js` (blocks, items, tags,
+recipes, smelting, fuel), `art.js` (tiles + sprites), `shapes.js` (shape layer + iso icons),
+`panel.js` (the Craft tab). **Owns block ids 100–199 and item ids 600–699** — other plugins pick
+ids outside these ranges.
+
+**Content.** Stations: Joiner's Bench (100), Clay Kiln (101, lit variant 102 glows, light 13),
+Cedar Chest (103). Farming: Tilled Loam (104), Sun Barley (105–108) and Earthroot (109–112) crop
+stages, Barley Seeds / Earthroot (plantable), Barley Loaf, Hearth-Roasted Root. Building: Rushlight
+(cross, light 14), Sunstone Lamp, Paper Screen, Slate Tiles, Dune Bricks, Oat/Ink/Peach felt (plus
+dye recipes for the 5 phase-1 felts), slabs ×4, steps ×2 (4 facings each), Pine Rail + Rubble Wall
+(connecting), Twig Ladder (4 facings), Plank Door + Paper Door (16 ids each: facing + open·4 +
+upper·8). Materials: Meadow Fiber, Copper/Moonsilver Ingot, Fired Brick, Reed Paper. Tools: Blade
+and Tiller for all 5 tiers (620–629); every tool has a top-level `damage`. Meadow tufts now drop
+fiber / seeds / earthroot. A new survival world starts empty-handed (log → planks → bench → tools);
+existing saves keep their inventory.
+
+**Recipes** (`content.js`): `{ out: [key, n], in: [[key | '#tag', n]…], st: 'hand' | 'bench', cat }`.
+Tags: `#planks`, `#log`. Hand recipes work anywhere from the Craft tab; bench recipes need the tab
+opened by using a Joiner's Bench. Runtime: `game.crafting.addRecipe({...})`.
+
+**Kiln.** `SMELT` (`{ in, out, count, time }`) and `FUEL` (`key → seconds`) tables. Any item def may
+also carry `smelt: { to: 'key', count?, time? }` (e.g. raw creature meat → roast) and `fuel: seconds`;
+they are picked up at install (call `game.crafting.refreshSmelting()` after registering later).
+Kilns tick on a 0.25 s timer (only active ones), swap to the lit block while burning, and persist.
+
+**Food.** Items carry `food: { hunger, saturation }` (the survival plugin eats them):
+earthroot 2/1, barley_loaf 5/6, roasted_earthroot 6/7.
+
+**Shapes.** Blocks with `shape` (array of `[x0,y0,z0,x1,y1,z1]` boxes in 1/16, or `'fence'`) use
+`render: 'none'` so the worker skips them; `shapes.js` builds one small mesh per chunk on the main
+thread in the chunk vertex format with the shared opaque material (faces take the light of the cell
+they face). Collision is still per full cell (`solid`): slabs/steps collide as full blocks and
+auto-step handles them; open doors and ladders are not solid.
+
+**Saves.** `data.crafting = { v: 1, kilns: { 'x,y,z': { i, f, o, b, bm, p } }, chests: { 'x,y,z': [27 stacks] } }`.
+Breaking a kiln/chest (any `blockChanged` away from it) spills its contents.
+
+**Events.** Emits `itemCrafted { id, count }`. Uses `blockUse` (bench/kiln/chest/door/ladder),
+`useItem` (doors, ladders, tiller, seeds — sets `handled`), `blockPlaced` (orients steps),
+`blockChanged`, `chunkLoaded/Unloaded`, `tick`, `save`, `load`.
+
+**Debug / tests.** `game.crafting.craftKey(key, n)`, `.kilns`, `.chests`, `.sys` (panel state),
+`.debug.grow(n)` (force n crop growth steps), `.debug.fastKilns(seconds)`.
+
+**Controls.** Craft tab: desktop C, VR main-stick click, or the tab in the pack panel. Use (grip /
+RMB) a bench, kiln or chest to open it; tap pack items to load a kiln / move into a chest, tap a
+station slot to take back. Grip a door to open/close it. Ladders: walk into one and push forward (or
+hold jump) to climb, back to descend; in VR grab the ladder with either grip and pull yourself up.
+Tiller: grip on turf/loam. Seeds/earthroot: grip on tilled loam.
