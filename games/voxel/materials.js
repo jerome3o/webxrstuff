@@ -87,7 +87,7 @@ export function createChunkMaterials(atlas) {
     uTime: { value: 0 },
     uDaylight: { value: 1 },
     uSkyLight: { value: new THREE.Color(1, 1, 1) },
-    uBlockLight: { value: new THREE.Color(1.05, 0.8, 0.55) },
+    uBlockLight: { value: new THREE.Color(1.12, 0.78, 0.48) },
     uFogColor: { value: new THREE.Color(0.8, 0.85, 0.95) },
     uFogNear: { value: 40 },
     uFogFar: { value: 90 },

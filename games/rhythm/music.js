@@ -212,10 +212,11 @@ export class Conductor {
     this.song = null; this.bus = null; this.idx = 0; this.t0 = 0; this.timer = null;
   }
   // Start the song so that song time 0 plays at AudioContext time `when`.
-  start(song, when) {
+  start(song, when, from = 0) {
     this.stop(0);
     const a = this.actx;
     this.song = song; this.t0 = when; this.idx = 0;
+    while (this.idx < song.events.length && song.events[this.idx].t < from - 1e-6) this.idx++;
     const bus = this.bus = a.createGain(); bus.gain.value = 0.75; bus.connect(this.out);
     this.drums = a.createGain(); this.drums.gain.value = 0.9; this.drums.connect(bus);
     this.leadBus = a.createGain(); this.leadBus.gain.value = 0.5; this.leadBus.connect(bus);

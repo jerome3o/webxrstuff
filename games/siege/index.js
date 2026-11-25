@@ -967,7 +967,7 @@ export async function create(ctx) {
     board.s = s; board.pos.y = bottom - FRAME_BOTTOM * s;
     applyBoard();
   }
-  function resetBoard() { board.s = DEF_SCALE; board.yaw = 0; board.pos.copy(DEF_POS); applyBoard(); }
+  function resetBoard() { if (shrink.on) return; board.s = DEF_SCALE; board.yaw = 0; board.pos.copy(DEF_POS); applyBoard(); }
 
   // ── Shrink-down mode ──────────────────────────────────────
   const shrink = { on: false, k: 1, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1, yaw: 0, pitch: 0, snapReady: true };

@@ -229,6 +229,7 @@ export function sdf(b, p, outNormal) { const d = sdfWorld(b, p.x, p.y, p.z); if 
 
 // ── contacts (struct-of-arrays) ───────────────────────────────
 const MAXC = 3000, S = 24, HSIZE = 16384;
+const RS = new Int32Array(128), RO = new Int32Array(128), KEEP = new Int32Array(24), TC = new Float64Array(24 * S), TA = new Array(24).fill(null), TB = new Array(24).fill(null), TK = new Int32Array(24);
 // layout: 0-2 n, 3-5 ra, 6-8 rb, 9-11 t1, 12-14 t2, 15 mN, 16 mT1, 17 mT2, 18 jn, 19 jt1, 20 jt2, 21 target, 22 mu, 23 depth
 
 export class World {
@@ -240,7 +241,7 @@ export class World {
     this.ca = new Array(MAXC).fill(null); this.cb = new Array(MAXC).fill(null);
     this.cAdyn = new Uint8Array(MAXC); this.cBdyn = new Uint8Array(MAXC);
     this.nc = 0;
-    this.beta = 0.25; this.slop = 0.0015; this.maxBias = 1.5;
+    this.beta = 0.2; this.slop = 0.002; this.maxBias = 1.5;
     // impact events for the game (cleared each step() call)
     this.impacts = []; for (let i = 0; i < 96; i++) this.impacts.push({ a: null, b: null, speed: 0, x: 0, y: 0, z: 0 });
     this.impactCount = 0;
@@ -291,7 +292,7 @@ export class World {
 
   // samples of A against SDF of B (B may be static). Contact normal points from B to A.
   _collideSamples(a, b) {
-    const w = a.ws, sr = a.sampleR, margin = 0.002;
+    const w = a.ws, sr = a.sampleR, margin = 0.002, start = this.nc;
     let found = 0;
     for (let i = 0; i < w.length; i += 3) {
       const x = w[i], y = w[i + 1], z = w[i + 2];
@@ -301,7 +302,49 @@ export class World {
         found++;
       }
     }
+    if (found > 4) this._reduce(start, this.nc);
     return found;
+  }
+
+  // Contact reduction: of the contacts sharing the deepest contact's normal keep at most 4 that span
+  // the largest area (deepest, farthest, and the two extremes on either side). Few well-spread contacts
+  // make the Gauss-Seidel solver converge far better than many (stable stacks, no creeping tilt).
+  _reduce(start, end) {
+    const C = this.C;
+    let i1 = start;
+    for (let i = start + 1; i < end; i++) if (C[i * S + 23] > C[i1 * S + 23]) i1 = i;
+    const o1 = i1 * S, nx = C[o1], ny = C[o1 + 1], nz = C[o1 + 2];
+    const px = C[o1 + 3], py = C[o1 + 4], pz = C[o1 + 5];
+    let ns = 0, no = 0;
+    for (let i = start; i < end; i++) {
+      const o = i * S;
+      if (C[o] * nx + C[o + 1] * ny + C[o + 2] * nz > 0.95) RS[ns++] = i; else RO[no++] = i;
+    }
+    if (ns <= 4) return;
+    let i2 = i1, best = -1;
+    for (let k = 0; k < ns; k++) { const o = RS[k] * S, dx = C[o + 3] - px, dy = C[o + 4] - py, dz = C[o + 5] - pz, d = dx * dx + dy * dy + dz * dz; if (d > best) { best = d; i2 = RS[k]; } }
+    const ex = C[i2 * S + 3] - px, ey = C[i2 * S + 4] - py, ez = C[i2 * S + 5] - pz;
+    let i3 = -1, i4 = -1, hi = 1e-7, lo = -1e-7;
+    for (let k = 0; k < ns; k++) {
+      const o = RS[k] * S, dx = C[o + 3] - px, dy = C[o + 4] - py, dz = C[o + 5] - pz;
+      const s = (ey * dz - ez * dy) * nx + (ez * dx - ex * dz) * ny + (ex * dy - ey * dx) * nz;
+      if (s > hi) { hi = s; i3 = RS[k]; } if (s < lo) { lo = s; i4 = RS[k]; }
+    }
+    let n = 0;
+    KEEP[n++] = i1; if (i2 !== i1) KEEP[n++] = i2; if (i3 >= 0) KEEP[n++] = i3; if (i4 >= 0) KEEP[n++] = i4;
+    for (let k = 0; k < no && n < KEEP.length; k++) KEEP[n++] = RO[k];
+    // compact (via scratch copies; indices may overlap)
+    for (let k = 0; k < n; k++) {
+      const src = KEEP[k] * S;
+      for (let q = 0; q < S; q++) TC[k * S + q] = C[src + q];
+      TA[k] = this.ca[KEEP[k]]; TB[k] = this.cb[KEEP[k]]; TK[k] = this.cKey[KEEP[k]];
+    }
+    for (let k = 0; k < n; k++) {
+      const dst = (start + k) * S;
+      for (let q = 0; q < S; q++) C[dst + q] = TC[k * S + q];
+      this.ca[start + k] = TA[k]; this.cb[start + k] = TB[k]; this.cKey[start + k] = TK[k];
+    }
+    this.nc = start + n;
   }
 
   substep(dt) {
@@ -328,10 +371,12 @@ export class World {
       // ground plane
       const w = a.ws, sr = a.sampleR;
       if (a.pos.y - a.bound < gy + 0.01) {
+        const st0 = this.nc;
         for (let k = 0; k < w.length; k += 3) {
           const d = w[k + 1] - sr - gy;
           if (d < 0.002) this._addContact(a, null, 0, 1, 0, w[k], w[k + 1] - sr, w[k + 2], -d, k / 3);
         }
+        if (this.nc - st0 > 4) this._reduce(st0, this.nc);
       }
       // statics
       const ab = a.bound, ax = a.pos.x, ay = a.pos.y, az = a.pos.z;
@@ -387,9 +432,10 @@ export class World {
       C[o + 18] = C[o + 19] = C[o + 20] = 0;
       const vn = this._relVel(i, nx, ny, nz);
       const e = Math.max(a.restitution, b ? b.restitution : 0.3);
-      let target = vn < -0.6 ? -e * vn : 0;
-      const bias = Math.min(this.maxBias, Math.max(0, C[o + 23] - this.slop) * beta);
-      if (bias > target) target = bias;
+      const depth = C[o + 23];
+      // penetrating: Baumgarte push-out; separated (speculative contact): may close the gap this substep
+      let target = depth >= 0 ? Math.min(this.maxBias, Math.max(0, depth - this.slop) * beta) : depth / dt;
+      if (vn < -0.6 && -e * vn > target) target = -e * vn;
       C[o + 21] = target;
       C[o + 22] = Math.sqrt(a.friction * (b ? b.friction : 0.6));
       if (vn < -0.8 && this.impactCount < this.impacts.length) {

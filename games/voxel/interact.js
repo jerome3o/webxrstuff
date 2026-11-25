@@ -272,7 +272,7 @@ export class Interaction {
       this.heldId = id;
     }
     const m = input.main, o = input.off;
-    this.held.visible = m.present;
+    this.held.visible = m.present && !(input.desktop && g.ui.modalOpen);
     if (m.present) {
       // rig-local pose of the main grip (captured before locomotion moved the rig this frame)
       this.held.position.copy(m.gripPos).applyMatrix4(g.rigInv);

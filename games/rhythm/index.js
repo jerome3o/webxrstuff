@@ -237,7 +237,8 @@ export async function create(ctx) {
   }
   function pause() {
     if (state !== 'play') return;
-    if (useAudio && actx.state === 'running') { actx.suspend(); suspendedByUs = true; }
+    // Stop the music where it is; resume restarts the scheduler from this song position.
+    stopMusic(0.05);
     resumeTimer = 0;
     setState('paused');
   }
@@ -246,7 +247,12 @@ export async function create(ctx) {
   }
   function finishResume() {
     resumeTimer = 0;
-    if (suspendedByUs) { actx.resume(); suspendedByUs = false; }
+    if (useAudio && actx.state === 'running') {
+      // continue seamlessly: visuals resume exactly at songPos, audio picks up from there
+      const lat = actx.currentTime - heardTime();
+      t0 = actx.currentTime - lat - songPos - offsetMs / 1000;
+      conductor.start(song, t0, songPos);
+    }
     lastPerf = performance.now(); audioWait = 0;
     for (const b of blades) b.hasPrev = false;
     setState('play');

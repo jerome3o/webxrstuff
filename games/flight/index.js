@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Panel, Pointer, FONTS, roundRect, fitText } from '../../src/platform/kit.js';
-import { generate, makeSampler, COURSES, VILLAGES, PERCH, HALF, mulberry, riverDist, RIVER } from './terrain.js';
+import { generate, makeSampler, COURSES, VILLAGES, PERCH, HALF, mulberry, RIVER } from './terrain.js';
 import { buildWorld, billboardMat, canvasTex } from './world.js';
 import { FlightModel } from './model.js';
 import { Wings } from './wings.js';
@@ -543,7 +543,7 @@ export async function create(ctx) {
         else ctx.setHud(`${top} · ${mid} · ${bot}${S.msg ? ' · ' + S.msg : ''} — W flap · S brake · A/D bank · look down = dive · Space tuck · E: perch`);
       }
     }
-    const vigBase = Math.min(1, Math.abs(lastTurn) * 1.4 + Math.max(0, (model.V - 18) / 22) + Math.abs(vy) / 25);
+    const vigBase = Math.min(1, Math.abs(lastTurn) * 2.2 + Math.max(0, (model.V - 18) / 22) + Math.abs(vy) / 25);
     const ho = hudOpts;
     ho.desktop = desk(); ho.showBoard = flying && (!ho.desktop || debugHud); ho.tunnel = settings.tunnel && flying;
     ho.vignette = S.state === 'flying' ? vigBase * VIG_LEVELS[settings.vignette] : 0;

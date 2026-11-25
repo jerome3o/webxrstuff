@@ -154,7 +154,7 @@ function buildTerrain(gen) {
           float st = fract(vWY / 4.0);
           float paddy = 1.0 - smoothstep(0.22, 0.34, st);
           float hsh = fract(sin(stepIx * 12.9898) * 43758.5453);
-          vec3 pc = hsh < 0.33 ? vec3(0.30, 0.55, 0.16) : hsh < 0.66 ? vec3(0.50, 0.62, 0.22) : vec3(0.55, 0.66, 0.66);
+          vec3 pc = hsh < 0.33 ? vec3(0.30, 0.55, 0.16) : hsh < 0.66 ? vec3(0.50, 0.62, 0.22) : vec3(0.46, 0.6, 0.55);
           vec3 wall = vec3(0.20, 0.27, 0.12);
           float edge = smoothstep(0.0, 0.035, st) * (1.0 - smoothstep(0.17, 0.22, st));
           vec3 tc = mix(wall, pc * (0.8 + 0.2 * edge), paddy);

@@ -308,17 +308,26 @@ registerTile('clear_pane', (p) => {
   for (let i = 0; i < 16; i++) { p.set(i, 0, '#e3f1f5'); p.set(i, 15, '#c9dfe6'); p.set(0, i, '#e3f1f5'); p.set(15, i, '#c9dfe6'); }
   for (let k = 0; k < 4; k++) { p.set(3 + k, 6 - k, '#ffffff'); p.set(5 + k, 7 - k, '#f2fbfd'); }
 });
-registerTile('lantern', (p, r) => {
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    let c;
-    if (y < 2 || y > 13) c = (y === 0 || y === 15) ? '#5a4234' : '#7a5a45';
-    else {
-      const glow = 1 - Math.abs(x - 7.5) / 9;
-      c = mix(hex('#f6bd7a'), hex('#fff0cf'), glow);
-      if (x % 5 === 2) c = mix(c, hex('#d98d56'), 0.55);
-      if (y === 3 || y === 12) c = mix(c, hex('#e0664a'), 0.7);
+registerTile('lantern', (p) => {
+  // round paper lantern: dark wooden caps, glowing ribbed paper body, cut-out corners
+  p.clear();
+  const half = [3, 5, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 6, 6, 5, 3];
+  for (let y = 0; y < 16; y++) {
+    const w = (y < 2 || y > 13) ? 4 : half[y];
+    for (let x = 0; x < 16; x++) {
+      const dx = Math.abs(x - 7.5);
+      if (dx > w + 0.5) continue;
+      let c;
+      if (y < 2 || y > 13) c = (y === 0 || y === 15) ? hex('#4a362b') : hex('#6e5140');
+      else {
+        const glow = 1 - dx / 8;
+        c = mix(hex('#f2a866'), hex('#fff3d6'), glow * glow);
+        if (x % 4 === 1) c = mix(c, hex('#d9824f'), 0.45);
+        if (y === 2 || y === 13) c = mix(c, hex('#c9573f'), 0.75);
+        if (y === 7 || y === 8) c = mix(c, hex('#ffe6b0'), 0.25);
+      }
+      p.set(x, y, c);
     }
-    p.set(x, y, c);
   }
 });
 registerTile('lantern_top', (p) => {

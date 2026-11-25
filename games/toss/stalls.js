@@ -307,7 +307,7 @@ export class TinStall extends Stall {
     for (const ox of [-0.32, 0.32]) for (let row = 0; row < 3; row++) {
       const n = 3 - row;
       for (let i = 0; i < n; i++) {
-        const t = new Body({ kind: CYL, r, hh }, { mass: 0.07, restitution: 0.15, friction: 0.45, rolling: 0.15, rimSamples: 12, tag: 'tin' });
+        const t = new Body({ kind: CYL, r, hh }, { mass: 0.07, restitution: 0.15, friction: 0.45, rolling: 0.5, rimSamples: 12, tag: 'tin' });
         t.home = new THREE.Vector3(ox + (i - (n - 1) / 2) * (2 * r + 0.004), 1.0 + hh + row * (2 * hh + 0.001) + 0.0006, -3.0);
         game.world.add(t); this.tinSet.add(t, cols[k++ % 3]);
         t.user = { stall: this, tin: true };

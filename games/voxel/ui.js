@@ -67,18 +67,18 @@ export class GameUI {
     const tab = this.tabs.find(t => t.id === id) ?? this.tabs[0];
     if (this.activeTab && this.activeTab !== tab.id) this.tabs.find(t => t.id === this.activeTab)?.onClose?.();
     this.activeTab = tab.id; tab.onOpen?.();
-    if (!this.modalOpen) {
-      // world-fixed, level, in front of the head
-      const head = g.input.head, s = g.player.scale;
-      _v.copy(head.fwd); _v.y = 0; if (_v.lengthSq() < 1e-4) _v.set(0, 0, -1); _v.normalize();
-      const dist = (g.input.desktop ? 0.95 : 0.8) * s;
-      this.modal.mesh.position.copy(head.pos).addScaledVector(_v, dist); this.modal.mesh.position.y -= (g.input.desktop ? 0.02 : 0.12) * s;
-      _w.copy(head.pos); _w.y = this.modal.mesh.position.y;
-      this.modal.mesh.lookAt(_w);
-      this.modal.mesh.scale.setScalar(s);
-      g.audio.click();
-    }
+    if (!this.modalOpen) { this._placeModal(); g.audio.click(); }
     this.modalOpen = true; this.modal.mesh.visible = true; this.modal.markDirty();
+  }
+  // world-fixed, level, in front of the head
+  _placeModal() {
+    const g = this.game, head = g.input.head, s = g.player.scale;
+    _v.copy(head.fwd); _v.y = 0; if (_v.lengthSq() < 1e-4) _v.set(0, 0, -1); _v.normalize();
+    const dist = (g.input.desktop ? 0.95 : 0.8) * s;
+    this.modal.mesh.position.copy(head.pos).addScaledVector(_v, dist); this.modal.mesh.position.y -= (g.input.desktop ? 0.02 : 0.12) * s;
+    _w.copy(head.pos); _w.y = this.modal.mesh.position.y;
+    this.modal.mesh.lookAt(_w);
+    this.modal.mesh.scale.setScalar(s);
   }
   close() {
     if (!this.modalOpen) return;
@@ -109,6 +109,8 @@ export class GameUI {
         hb.lookAt(_w);
       }
     }
+    // keep the modal near the player (e.g. while falling or after a teleport)
+    if (this.modalOpen && this.modal.mesh.position.distanceTo(input.head.pos) > 2.2 * s) this._placeModal();
     // toast
     const tp = this.toastPanel.mesh;
     if (this.toastT > 0) {
@@ -194,7 +196,7 @@ export class GameUI {
     const g = this.game, inv = g.inventory;
     if (g.mode === 'creative') {
       const list = this.paletteList || (this.paletteList = ITEMS.filter(d => d && (d.kind !== 'block' || BLOCKS[d.id]?.creative !== false)).map(d => d.id));
-      const cols = 12, size = 70, gap = 8, x0 = (W - (cols * size + (cols - 1) * gap)) / 2, y0 = 108;
+      const cols = 12, size = 68, gap = 8, x0 = (W - (cols * size + (cols - 1) * gap)) / 2, y0 = 106;
       list.forEach((id, i) => {
         const cx = x0 + (i % cols) * (size + gap), cy = y0 + Math.floor(i / cols) * (size + gap);
         const def = ITEMS[id];
@@ -202,9 +204,9 @@ export class GameUI {
           inv.setSlot(inv.selected, { id, count: def.stack ?? 64, ...(def.tool ? { dur: def.tool.durability } : {}) });
         });
       });
-      this._hotbarRow(c, W, H, p, 600, (i) => inv.select(i));
-      c.fillStyle = COL.dim; c.font = `400 24px ${FONTS.sans}`; c.textAlign = 'left';
-      c.fillText('Pick a block to put it in the highlighted hotbar slot.', 40, 588 - 6);
+      this._hotbarRow(c, W, H, p, 616, (i) => inv.select(i));
+      c.fillStyle = COL.dim; c.font = `400 24px ${FONTS.sans}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('Pick a block or tool: it goes into the highlighted hotbar slot.', W / 2, 597);
       return;
     }
     // survival pack: 27 storage + hotbar; click to pick up / put down / swap / merge

@@ -783,8 +783,8 @@ export async function create(ctx) {
         for (let k = 0; k < NCOL; k++) for (let m = 0; m < L.need[k]; m++) {
           const a = (j / need) * Math.PI * 2 + t * 0.4;
           const on = m < L.fill[k];
-          const c = COLORS[k].rgb, br = on ? 1 : 0.35 + 0.1 * Math.sin(t * 2 + j);
-          fxGlow.push(L.pos.x + Math.cos(a) * R, by, L.pos.z + Math.sin(a) * R, c[0] * br, c[1] * br, c[2] * br, L.orb ? 0.024 : 0.018);
+          const c = COLORS[k].rgb, br = on ? 1.1 : 0.45 + 0.12 * Math.sin(t * 2 + j);
+          fxGlow.push(L.pos.x + Math.cos(a) * R, by, L.pos.z + Math.sin(a) * R, c[0] * br, c[1] * br, c[2] * br, L.orb ? 0.03 : 0.024);
           j++;
         }
         if (L.orb) fxGlow.push(L.pos.x, by, L.pos.z, 0.3, 0.3, 0.32, 0.03 + 0.01 * Math.sin(t * 2));

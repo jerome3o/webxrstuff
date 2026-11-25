@@ -95,7 +95,7 @@ export class Sky {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false, blending: THREE.AdditiveBlending }));
       m.renderOrder = -98; m.frustumCulled = false; this.root.add(m); return m;
     };
-    this.sun = disc(paintSun(), 90);
+    this.sun = disc(paintSun(), 80); this.sun.material.blending = THREE.NormalBlending;
     this.moon = disc(paintMoon(), 60); this.moon.material.blending = THREE.NormalBlending;
 
     // clouds: one big plane, texture scrolls; world-anchored via uv offset

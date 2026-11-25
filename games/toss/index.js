@@ -25,7 +25,7 @@ export async function create(ctx) {
   if (!Array.isArray(data.prizes)) data.prizes = [];
   if (typeof data.best !== 'object' || !data.best) data.best = {};
 
-  const world = new World({ dt: 1 / 240, iterations: 8, maxSubsteps: 12 });
+  const world = new World({ dt: 1 / 180, iterations: 8, maxSubsteps: 9 });
   const sounds = new Sounds(ctx.audio);
   const pointer = new Pointer(scene);
   pointer.onClick = () => sounds.click();
