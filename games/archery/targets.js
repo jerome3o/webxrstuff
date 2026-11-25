@@ -10,6 +10,7 @@ import { makeCanvas, canvasTexture, rand, pick, FONT_BRUSH, FONT_SERIF } from '.
 const _v = new THREE.Vector3();
 const fontRedraws = [];
 export function redrawTargetTextures() { for (const f of fontRedraws) f(); }
+export function resetTargetTextures() { fontRedraws.length = 0; }
 
 function charTexture(draw, w = 256, h = 256) {
   const c = makeCanvas(w, h);

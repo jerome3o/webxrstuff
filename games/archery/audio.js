@@ -12,15 +12,13 @@ export class AudioEngine {
     this._step = 0;
   }
 
-  init() {
+  // Uses the platform's shared AudioContext and output node.
+  init(sharedCtx, outNode) {
     if (this.ctx) { this.ctx.resume?.(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    const ctx = this.ctx = new AC();
+    if (!sharedCtx) return;
+    const ctx = this.ctx = sharedCtx;
     this.master = ctx.createGain(); this.master.gain.value = 0.9;
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.ratio.value = 4;
-    this.master.connect(comp).connect(ctx.destination);
+    this.master.connect(outNode);
 
     this.sfx = ctx.createGain(); this.sfx.gain.value = 1; this.sfx.connect(this.master);
     this.music = ctx.createGain(); this.music.gain.value = 0.32; this.music.connect(this.master);
@@ -192,6 +190,7 @@ export class AudioEngine {
     src.connect(f).connect(this.windGain).connect(this.sfx);
     src.start();
     this.windFilter = f;
+    this._windSrc = src;
   }
   setWind(strength) {
     if (!this.windGain) return;
@@ -210,6 +209,12 @@ export class AudioEngine {
   stopMusic() {
     clearInterval(this._musicTimer); this._musicTimer = null;
     if (this._droneNodes) { this._droneNodes.forEach(n => { try { n.stop(); } catch { } }); this._droneNodes = null; }
+  }
+  shutdown() {
+    this.stopMusic();
+    try { this._windSrc?.stop(); } catch { }
+    try { this.master?.disconnect(); } catch { }
+    this.ctx = null; this.windGain = null;
   }
   toggleMusic() { this.musicOn = !this.musicOn; this.musicOn ? this.startMusic() : this.stopMusic(); return this.musicOn; }
 

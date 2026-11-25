@@ -8,6 +8,7 @@ export const SUN_DIR = new THREE.Vector3(-0.35, 0.22, -0.9).normalize();
 const FOG_COLOR = new THREE.Color(0xe9c9a0);
 
 export function buildEnvironment(world, physics) {
+  _fontRedraws.length = 0; env_backDisc = null;
   const env = { updaters: [], banners: [], windUniform: { value: new THREE.Vector3(1, 0, 0) } };
   // Everything static goes under one root so bakeStatic() can merge it into few draw calls.
   const scene = new THREE.Group(); scene.name = 'envRoot'; world.add(scene);
